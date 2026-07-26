@@ -1,7 +1,12 @@
-import { groups } from '../../fixtures/catalog'
+import { eventHandler } from 'h3'
+import { catalogGroups as groups } from '../../fixtures'
 import { mockDelay } from '../../utils/mock-delay'
+import { mockResponse } from '../../utils/mock-response'
 
-export default defineEventHandler(async () => {
+export const buildProductGroupsResponse = () =>
+  mockResponse([...groups].sort((left, right) => left.sortOrder - right.sortOrder))
+
+export default eventHandler(async () => {
   await mockDelay()
-  return { data: groups }
+  return buildProductGroupsResponse()
 })

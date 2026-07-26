@@ -1,13 +1,7 @@
-export {
-  productSummarySchema,
-  searchMatchSchema,
-  searchResponseSchema,
-  searchResultSchema
-} from './model/product.schema'
-export type {
-  ProductSummary,
-  SearchMatch,
-  SearchResponse,
-  SearchResult
-} from './model/product.schema'
+export * from './model'
 export { default as ProductSearchResult } from './ui/ProductSearchResult.vue'
+export { default as ProductAnalogList } from './ui/ProductAnalogList.vue'
+export { default as ProductCard } from './ui/ProductCard.vue'
+export { default as ProductGallery } from './ui/ProductGallery.vue'
+export { default as ProductOemList } from './ui/ProductOemList.vue'
+export { default as ProductSpecifications } from './ui/ProductSpecifications.vue'

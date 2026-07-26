@@ -1,87 +1,97 @@
 <script setup lang="ts">
-import CatalogToolbar from '~/components/CatalogToolbar.vue'
-import LoadingState from '~/components/LoadingState.vue'
-import PageHero from '~/components/PageHero.vue'
-import ProductCard from '~/components/ProductCard.vue'
-import type { ApiResponse, Paginated, Product } from '~/types/catalog'
+import { productPageResponseSchema } from '~/entities/product'
+import { useCatalogStateStore } from '~/features/filter-products'
+import { apiRequest, getCategoryProducts } from '~/shared/api'
+import { LoadingState, RecoverableError } from '~/shared/ui/async-state'
+import { CatalogGrid } from '~/widgets/catalog-grid'
 
 const route = useRoute()
-const filters = useCatalogFilters()
-const page = ref(1)
-const query = computed(() => ({
-  page: page.value,
-  pageSize: 12,
-  filters: JSON.stringify(filters.value)
-}))
-const { data, status, error, refresh } = await useFetch<ApiResponse<Paginated<Product>>>(
-  '/api/products',
-  {
-    query,
-    watch: [query]
-  }
+const router = useRouter()
+const store = useCatalogStateStore()
+const slug = computed(() => String(route.params.slug))
+
+const loadProducts = () => {
+  store.restore(slug.value, route.query)
+  const serialized = store.serializedQuery
+  const filter = Array.isArray(serialized.filter)
+    ? serialized.filter
+    : serialized.filter
+      ? [serialized.filter]
+      : undefined
+  return apiRequest(
+    getCategoryProducts(slug.value, {
+      filter,
+      page: store.page,
+      pageSize: 9,
+      vehicleModificationId: store.vehicleModificationId
+    }),
+    (value) => productPageResponseSchema.parse(value)
+  )
+}
+
+const { data, status, error, refresh } = await useAsyncData(
+  () => `category-${slug.value}`,
+  loadProducts,
+  { watch: [() => route.fullPath] }
 )
-const result = computed(() => {
-  const base = data.value?.data
-  if (!base) return
-  const q = String(route.query.q || '').toLowerCase()
-  return q
-    ? { ...base, items: base.items.filter((x) => `${x.sku} ${x.name}`.toLowerCase().includes(q)) }
-    : base
+const result = computed(() => data.value?.data)
+const categoryName = computed(() => result.value?.categoryName ?? 'Категория товаров')
+const categoryDescription = computed(
+  () => result.value?.categoryDescription ?? 'Фильтруйте товары по характеристикам'
+)
+
+const navigate = async () => {
+  await router.push({ query: store.serializedQuery })
+}
+
+watch(
+  result,
+  async (value) => {
+    if (!value) return
+    const validFilters: Record<string, string[]> = {}
+    for (const facet of value.facets) {
+      const allowed = new Set(facet.options.map((option) => option.value))
+      const selected = (store.filters[facet.key] ?? []).filter((item) => allowed.has(item))
+      if (selected.length) validFilters[facet.key] = selected
+    }
+    const currentPage = store.page
+    store.replaceFilters(validFilters)
+    store.setPage(value.page)
+    if (
+      currentPage !== value.page ||
+      JSON.stringify(store.serializedQuery) !== JSON.stringify(route.query)
+    ) {
+      await router.replace({ query: store.serializedQuery })
+    }
+  },
+  { immediate: true }
+)
+
+const parameterized = computed(() => Object.keys(route.query).length > 0)
+useSeoMeta({
+  title: () => `${categoryName.value} — каталог DAN`,
+  description: () =>
+    result.value?.categoryDescription || `${categoryName.value}: характеристики и фильтры товаров.`,
+  robots: () => (parameterized.value ? 'noindex,follow' : 'index,follow')
 })
-const chips = computed(() => [
-  ...filters.value.types,
-  ...filters.value.sides,
-  ...filters.value.lengths.map((x) => `${x} мм`),
-  ...filters.value.mounts
-])
-const reset = () => (filters.value = { types: [], sides: [], lengths: [], mounts: [] })
+useHead({ link: [{ rel: 'canonical', href: computed(() => `/category/${slug.value}`) }] })
 </script>
+
 <template>
   <main>
     <PageHero
-      title="Щетки стеклоочистителя"
-      subtitle="Подберите щетки по типу, длине и креплению"
-      :crumbs="[{ label: 'Каталог', to: '/catalog' }, { label: 'Щетки стеклоочистителя' }]"
+      :title="categoryName"
+      :subtitle="categoryDescription"
+      :crumbs="[{ label: 'Каталог', to: '/catalog' }, { label: categoryName }]"
     />
-    <section class="catalog-layout">
-      <CatalogToolbar />
-      <div class="products-area">
-        <div class="section-heading">
-          <h2>Товары категории</h2>
-          <span>Найдено: {{ result?.total || 0 }} товаров</span>
-        </div>
-        <div v-if="chips.length" class="chips">
-          <span>Применено:</span><b v-for="chip in chips" :key="chip">{{ chip }}</b>
-          <button @click="reset">Сбросить все</button>
-        </div>
-        <LoadingState
-          v-if="status === 'pending' || error"
-          :error="error?.message"
-          @retry="refresh"
-        />
-        <template v-else-if="result?.items.length">
-          <div class="products-grid">
-            <ProductCard v-for="product in result.items" :key="product.id" :product="product" />
-          </div>
-          <div class="pagination">
-            <button :disabled="page === 1" @click="page--">‹</button>
-            <button
-              v-for="n in Math.min(result.pages, 5)"
-              :key="n"
-              :class="{ active: n === page }"
-              @click="page = n"
-            >
-              {{ n }}
-            </button>
-            <button :disabled="page === result.pages" @click="page++">›</button>
-          </div>
-        </template>
-        <div v-else class="empty-state">
-          <h3>Ничего не найдено</h3>
-          <p>Измените запрос или сбросьте фильтры.</p>
-          <button class="button" @click="reset">Сбросить фильтры</button>
-        </div>
-      </div>
-    </section>
+    <LoadingState v-if="status === 'pending' && !result" message="Загружаем товары" />
+    <RecoverableError
+      v-else-if="error && !result"
+      message="Не удалось загрузить товары категории."
+      @retry="refresh"
+    />
+    <template v-else-if="result">
+      <CatalogGrid :result="result" @navigate="navigate" />
+    </template>
   </main>
 </template>

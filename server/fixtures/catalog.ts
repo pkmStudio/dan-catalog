@@ -1,8 +1,29 @@
 export interface CatalogFixtureGroup {
   id: string
+  slug: string
   name: string
+  description: string
   icon: string
-  count: number
+  sortOrder: number
+  categoryCount: number
+}
+
+export interface CatalogFixtureCategory {
+  id: string
+  groupId: string
+  slug: string
+  name: string
+  description: string
+  image: string
+  productCount: number
+  filterFacets: CatalogFixtureFacet[]
+}
+
+export interface CatalogFixtureFacet {
+  key: string
+  label: string
+  kind: 'enum' | 'number'
+  options: Array<{ value: string; label: string; count: number }>
 }
 
 export interface CatalogFixtureProduct {
@@ -45,10 +66,98 @@ const groupData: Array<[string, string, string]> = [
 
 export const groups: CatalogFixtureGroup[] = groupData.map(([id, name, icon], index) => ({
   id,
+  slug: id,
   name,
+  description: `Категории раздела «${name}»`,
   icon,
-  count: 48 - index
+  sortOrder: index,
+  categoryCount: id === 'wipers' ? 2 : id === 'brakes' ? 2 : 0
 }))
+
+export const wiperFacets: CatalogFixtureFacet[] = [
+  {
+    key: 'type',
+    label: 'Тип щётки',
+    kind: 'enum',
+    options: ['Бескаркасная', 'Каркасная', 'Гибридная'].map((value) => ({
+      value,
+      label: value,
+      count: 16
+    }))
+  },
+  {
+    key: 'side',
+    label: 'Сторона установки',
+    kind: 'enum',
+    options: [
+      { value: 'Передняя', label: 'Передняя', count: 38 },
+      { value: 'Задняя', label: 'Задняя', count: 10 }
+    ]
+  },
+  {
+    key: 'length',
+    label: 'Длина, мм',
+    kind: 'number',
+    options: [300, 400, 500, 600].map((value) => ({
+      value: String(value),
+      label: String(value),
+      count: 12
+    }))
+  },
+  {
+    key: 'mount',
+    label: 'Крепление',
+    kind: 'enum',
+    options: ['Hook', 'Push Button', 'Pinch Tab'].map((value) => ({
+      value,
+      label: value,
+      count: 16
+    }))
+  }
+]
+
+export const categories: CatalogFixtureCategory[] = [
+  {
+    id: 'wipers',
+    groupId: 'wipers',
+    slug: 'wipers',
+    name: 'Щётки стеклоочистителя',
+    description: 'Щётки разных типов, размеров и вариантов крепления.',
+    image: '/images/generated-1784981127693.png',
+    productCount: 48,
+    filterFacets: wiperFacets
+  },
+  {
+    id: 'wiper-accessories',
+    groupId: 'wipers',
+    slug: 'wiper-accessories',
+    name: 'Аксессуары для щёток',
+    description: 'Демонстрационная пустая категория.',
+    image: '/images/generated-1784981127652.png',
+    productCount: 0,
+    filterFacets: []
+  },
+  {
+    id: 'brake-pads',
+    groupId: 'brakes',
+    slug: 'brake-pads',
+    name: 'Тормозные колодки',
+    description: 'Колодки для легковых автомобилей.',
+    image: '/images/generated-1784981129280.png',
+    productCount: 0,
+    filterFacets: []
+  },
+  {
+    id: 'brake-discs',
+    groupId: 'brakes',
+    slug: 'brake-discs',
+    name: 'Тормозные диски',
+    description: 'Диски штатных размеров.',
+    image: '/images/generated-1784981129826.png',
+    productCount: 0,
+    filterFacets: []
+  }
+]
 
 const images = [
   '/images/generated-1784981127693.png',
@@ -98,14 +207,17 @@ export const products: CatalogFixtureProduct[] = Array.from({ length: 48 }, (_, 
   warranty: '12 месяцев',
   description:
     'Бескаркасная щетка стеклоочистителя с универсальным адаптером. Обеспечивает равномерный прижим по всей длине и чистую работу в любую погоду.',
-  oem: ['85212-0R040', '85222-0R040', '98350-2W100'],
-  analogs: ['BOSCH AR601S', 'DENSO DF-010', 'LYNXauto LW600'],
-  applications: [
-    'TOYOTA CAMRY XV70 · 2018–2023',
-    'TOYOTA RAV4 XA50 · 2019–2024',
-    'HONDA CR-V RW · 2017–2022',
-    'MAZDA CX-5 KF · 2017–2024',
-    'NISSAN X-TRAIL T32 · 2015–2022',
-    'SUBARU FORESTER SK · 2018–2024'
-  ]
+  oem: index === 47 ? [] : ['85212-0R040', '85222-0R040', '98350-2W100'],
+  analogs: index === 47 ? [] : ['BOSCH AR601S', 'DENSO DF-010', 'LYNXauto LW600'],
+  applications:
+    index === 46
+      ? []
+      : [
+          'TOYOTA CAMRY XV70 · 2018–2023',
+          'TOYOTA RAV4 XA50 · 2019–2024',
+          'HONDA CR-V RW · 2017–2022',
+          'MAZDA CX-5 KF · 2017–2024',
+          'NISSAN X-TRAIL T32 · 2015–2022',
+          'SUBARU FORESTER SK · 2018–2024'
+        ]
 }))

@@ -326,9 +326,36 @@ a {
   flex: none;
 }
 
+.group-card__image {
+  inline-size: 56px;
+  block-size: 56px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  flex: none;
+}
+
+.group-card__image > img,
+.group-card__image > .image-fallback {
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  object-fit: cover;
+}
+
+.group-card__content {
+  min-inline-size: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.group-card__content small {
+  color: var(--text-muted);
+}
+
 .app-icon {
-  font-size: 23px;
-  font-style: normal;
+  display: block;
 }
 
 .group-card b {
@@ -490,15 +517,21 @@ a {
   font-size: var(--font-size-sm);
 }
 
-.chips b {
+.chips b,
+.chips .chip {
   padding: 9px 12px;
+  border: 0;
   border-radius: 18px;
   background: var(--bg-brand-subtle);
   color: var(--brand-orange);
   font-size: 12px;
 }
 
-.chips button {
+.chips .chip {
+  cursor: pointer;
+}
+
+.chips button:not(.chip) {
   border: 0;
   background: transparent;
   font-size: 12px;

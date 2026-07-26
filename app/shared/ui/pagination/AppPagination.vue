@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ChevronLeft, ChevronRight } from '@lucide/vue'
+
 const props = defineProps<{
   page: number
   pageCount: number
@@ -21,10 +23,13 @@ const selectPage = (page: number) => {
 
 <template>
   <nav v-if="pageCount > 1" class="pagination" :aria-label="label || 'Страницы каталога'">
-    <button type="button" :disabled="page <= 1" @click="selectPage(page - 1)">
-      <span aria-hidden="true">←</span>
-      <span class="pagination__desktop-label">Назад</span>
-      <span class="sr-only">Предыдущая страница</span>
+    <button
+      type="button"
+      aria-label="Предыдущая страница"
+      :disabled="page <= 1"
+      @click="selectPage(page - 1)"
+    >
+      <ChevronLeft :size="20" :stroke-width="2" aria-hidden="true" />
     </button>
     <button
       v-for="item in pages"
@@ -36,10 +41,13 @@ const selectPage = (page: number) => {
     >
       {{ item }}
     </button>
-    <button type="button" :disabled="page >= pageCount" @click="selectPage(page + 1)">
-      <span class="pagination__desktop-label">Вперёд</span>
-      <span aria-hidden="true">→</span>
-      <span class="sr-only">Следующая страница</span>
+    <button
+      type="button"
+      aria-label="Следующая страница"
+      :disabled="page >= pageCount"
+      @click="selectPage(page + 1)"
+    >
+      <ChevronRight :size="20" :stroke-width="2" aria-hidden="true" />
     </button>
   </nav>
 </template>
@@ -53,6 +61,8 @@ const selectPage = (page: number) => {
 }
 
 .pagination button {
+  display: grid;
+  place-items: center;
   min-inline-size: 44px;
   min-block-size: 44px;
   padding: var(--spacing-sm);
@@ -78,22 +88,5 @@ const selectPage = (page: number) => {
 .pagination button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
-}
-
-.sr-only {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-@media (max-width: 520px) {
-  .pagination__desktop-label {
-    display: none;
-  }
 }
 </style>

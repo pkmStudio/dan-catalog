@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import type { ApiResponse, Product } from '~/types/catalog'
+import { productResponseSchema } from '~/entities/product'
+import { apiRequest, getProduct } from '~/shared/api'
 
 const route = useRoute()
-const { data, status } = await useFetch<ApiResponse<Product>>(`/api/products/${route.params.id}`)
+const { data, status } = await useAsyncData(`question-product-${route.params.id}`, () =>
+  apiRequest(getProduct(String(route.params.id)), (value) => productResponseSchema.parse(value))
+)
 const product = computed(() => data.value?.data)
 const success = ref(false),
   error = ref('')
