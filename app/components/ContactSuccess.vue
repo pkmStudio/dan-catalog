@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Check } from '@lucide/vue'
 
-defineProps<{requestNumber: string}>()
+defineProps<{ requestNumber: string }>()
 </script>
 
 <template>
   <section class="contact-success">
     <div class="contact-success-card">
-      <span class="contact-success-icon"><Check :size="32"/></span>
+      <span class="contact-success-icon"><Check :size="32" /></span>
       <h1>Сообщение отправлено</h1>
       <p>Специалист DAN изучит ваше обращение и свяжется с вами в рабочее время.</p>
       <span class="request-number">Обращение № {{ requestNumber }}</span>

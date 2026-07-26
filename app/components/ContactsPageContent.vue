@@ -7,16 +7,16 @@ const requestNumber = computed(() => {
 </script>
 
 <template>
-  <ContactSuccess v-if="requestNumber" :request-number="requestNumber"/>
+  <ContactSuccess v-if="requestNumber" :request-number="requestNumber" />
   <template v-else>
     <PageHero
       title="Свяжитесь с нами"
       subtitle="Поможем подобрать запчасть и ответим на вопросы о продукции DAN."
-      :crumbs="[{label:'Контакты'}]"
+      :crumbs="[{ label: 'Контакты' }]"
     />
     <section class="contacts">
-      <ContactInfo/>
-      <ContactForm/>
+      <ContactInfo />
+      <ContactForm />
     </section>
   </template>
 </template>

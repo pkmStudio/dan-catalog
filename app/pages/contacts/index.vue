@@ -1,5 +1,5 @@
 <template>
   <main>
-    <ContactsPageContent/>
+    <ContactsPageContent />
   </main>
 </template>

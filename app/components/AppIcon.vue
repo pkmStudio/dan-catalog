@@ -1,4 +1,5 @@
-<script setup lang="ts">const props = defineProps<{ name: string }>();
+<script setup lang="ts">
+const props = defineProps<{ name: string }>()
 const symbols: Record<string, string> = {
   'circle-stop': '◉',
   waypoints: '⌁',
@@ -16,6 +17,9 @@ const symbols: Record<string, string> = {
   gauge: '◴',
   lightbulb: '♧',
   wind: '≋'
-};
-const symbol = computed(() => symbols[props.name] || '•')</script>
-<template><span class="app-icon" aria-hidden="true">{{ symbol }}</span></template>
+}
+const symbol = computed(() => symbols[props.name] || '•')
+</script>
+<template>
+  <span class="app-icon" aria-hidden="true">{{ symbol }}</span>
+</template>

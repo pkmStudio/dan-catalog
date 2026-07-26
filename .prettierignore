@@ -1,0 +1,12 @@
+.agents/
+.codex/
+.nuxt/
+.output/
+.specify/
+build/
+coverage/
+dist/
+node_modules/
+public/images/
+package-lock.json
+specs/

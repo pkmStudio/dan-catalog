@@ -5,6 +5,8 @@
 .nitro
 .cache
 dist
+build
+coverage
 
 # Node dependencies
 node_modules
@@ -15,8 +17,12 @@ logs
 
 # Misc
 .DS_Store
+Thumbs.db
 .fleet
 .idea
+.vscode
+*.tmp
+*.swp
 
 # Local env files
 .env
@@ -25,3 +31,8 @@ logs
 
 # Local mock images (production assets will be stored in S3)
 /public/images/
+
+# SpecKit
+.specify
+specs
+.agents
