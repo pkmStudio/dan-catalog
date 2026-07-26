@@ -22,3 +22,6 @@ logs
 .env
 .env.*
 !.env.example
+
+# Local mock images (production assets will be stored in S3)
+/public/images/
