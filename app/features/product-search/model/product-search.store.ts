@@ -5,8 +5,7 @@ import {
   type SearchMatch,
   type SearchResponse
 } from '~/entities/product/model'
-import { apiRequest, searchProducts } from '~/shared/api'
-import { getSafeErrorMessage } from '~/shared/api/error'
+import { apiRequest, getSafeErrorMessage, searchProducts } from '~/shared/api'
 
 export const SEARCH_DEBOUNCE_MS = 280
 export const SEARCH_MIN_QUERY_LENGTH = 2

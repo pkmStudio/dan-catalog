@@ -1,4 +1,4 @@
-import { models } from '../../fixtures/vehicles'
+import { vehicleModels as models } from '../../fixtures'
 import { mockDelay } from '../../utils/mock-delay'
 
 export default defineEventHandler(async (event) => {

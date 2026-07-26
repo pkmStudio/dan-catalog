@@ -5,7 +5,7 @@ import {
   SEARCH_DEBOUNCE_MS,
   useProductSearchStore,
   type SearchExecutor
-} from '~/features/product-search/model/product-search.store'
+} from '~/features/product-search/model'
 import { buildSearchResponse } from '~~/server/api/catalog/search.get'
 
 const response = (sku: string, match: 'exact' | 'multiple' = 'multiple'): SearchResponse => ({
