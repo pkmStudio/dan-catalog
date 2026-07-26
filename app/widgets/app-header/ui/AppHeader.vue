@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ProductSearch } from '~/features/product-search'
+
 type ActiveSection = 'catalog' | 'vehicle' | 'about' | 'contacts'
 
 interface NavigationItem {
@@ -39,7 +41,7 @@ const links: NavigationItem[] = [
       </nav>
 
       <div class="desktop-search">
-        <SearchBox />
+        <ProductSearch surface="header" />
       </div>
 
       <button
@@ -63,7 +65,7 @@ const links: NavigationItem[] = [
       <small>Навигация</small>
     </div>
 
-    <SearchBox @navigate="isOpen = false" />
+    <ProductSearch surface="mobile-menu" @navigate="isOpen = false" />
 
     <nav aria-label="Мобильная навигация">
       <NuxtLink v-for="link in links" :key="link.to" :to="link.to" @click="isOpen = false">

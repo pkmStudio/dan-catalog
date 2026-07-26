@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CarFront, MessageCircle } from '@lucide/vue'
 import type { ApiResponse, Product } from '~/types/catalog'
 
 const route = useRoute()
@@ -64,10 +65,14 @@ const tabData = computed(() => product.value?.[tab.value] || [])
             <NuxtLink to="/vehicle">{{ vehicle ? 'Изменить' : 'Выбрать' }}</NuxtLink>
           </div>
           <div class="product-actions">
-            <NuxtLink class="button" to="/vehicle">⌁ Проверить совместимость</NuxtLink>
-            <NuxtLink class="button secondary orange" :to="`/product/${product.id}/question`"
-              >◌ Задать вопрос</NuxtLink
-            >
+            <NuxtLink class="button" to="/vehicle">
+              <CarFront :size="18" :stroke-width="2" aria-hidden="true" />
+              <span>Проверить совместимость</span>
+            </NuxtLink>
+            <NuxtLink class="button secondary orange" :to="`/product/${product.id}/question`">
+              <MessageCircle :size="18" :stroke-width="2" aria-hidden="true" />
+              <span>Задать вопрос</span>
+            </NuxtLink>
           </div>
           <p class="description">{{ product.description }}</p>
           <div class="specs">
@@ -108,7 +113,12 @@ const tabData = computed(() => product.value?.[tab.value] || [])
             </div>
           </div>
           <div class="question-callout">
-            <i>◌</i>
+            <MessageCircle
+              class="question-callout__icon"
+              :size="20"
+              :stroke-width="2"
+              aria-hidden="true"
+            />
             <div>
               <b>Есть вопрос по товару?</b>
               <p>Оставьте заявку и наши специалисты свяжутся с вами</p>

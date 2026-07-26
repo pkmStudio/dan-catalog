@@ -75,7 +75,10 @@ const names = [
 export const products: CatalogFixtureProduct[] = Array.from({ length: 48 }, (_, index) => ({
   id: index === 0 ? 'lw-600' : `dan-wb-${String(index + 1).padStart(3, '0')}`,
   sku: index === 0 ? 'LW-600' : `DAN-WB-${String(index + 1).padStart(3, '0')}`,
-  name: names[index % names.length] ?? names[0]!,
+  name:
+    index === 0
+      ? 'Щётка стеклоочистителя бескаркасная DAN 600 мм'
+      : (names[index % names.length] ?? names[0]!),
   categoryId: 'wipers',
   image: images[index % images.length] ?? images[0]!,
   images:

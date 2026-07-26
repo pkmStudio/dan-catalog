@@ -3,9 +3,12 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 const appAlias = fileURLToPath(new URL('./app', import.meta.url))
+const rootAlias = fileURLToPath(new URL('.', import.meta.url))
 const aliases = {
   '@': appAlias,
-  '~': appAlias
+  '~': appAlias,
+  '@@': rootAlias,
+  '~~': rootAlias
 }
 
 export default defineConfig({
