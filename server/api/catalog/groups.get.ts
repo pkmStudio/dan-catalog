@@ -1,6 +1,7 @@
-import { delay, groups } from '../../utils/mock-data'
+import { groups } from '../../fixtures/catalog'
+import { mockDelay } from '../../utils/mock-delay'
 
 export default defineEventHandler(async () => {
-  await delay()
+  await mockDelay()
   return { data: groups }
 })

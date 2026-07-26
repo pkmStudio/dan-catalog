@@ -1,4 +1,28 @@
-import type { Product, ProductGroup, VehicleMake, VehicleModel } from '~/types/catalog'
+export interface CatalogFixtureGroup {
+  id: string
+  name: string
+  icon: string
+  count: number
+}
+
+export interface CatalogFixtureProduct {
+  id: string
+  sku: string
+  name: string
+  categoryId: string
+  image: string
+  images: string[]
+  type: string
+  side: string
+  length: number
+  mount: string
+  material: string
+  warranty: string
+  description: string
+  oem: string[]
+  analogs: string[]
+  applications: string[]
+}
 
 const groupData: Array<[string, string, string]> = [
   ['brakes', 'Тормозная система', 'circle-stop'],
@@ -19,13 +43,14 @@ const groupData: Array<[string, string, string]> = [
   ['wipers', 'Щетки стеклоочистителя', 'wind']
 ]
 
-export const groups: ProductGroup[] = groupData.map(([id, name, icon], i) => ({
+export const groups: CatalogFixtureGroup[] = groupData.map(([id, name, icon], index) => ({
   id,
   name,
   icon,
-  count: 48 - i
+  count: 48 - index
 }))
-const imgs = [
+
+const images = [
   '/images/generated-1784981127693.png',
   '/images/generated-1784981127652.png',
   '/images/generated-1784981129280.png',
@@ -35,6 +60,7 @@ const imgs = [
   '/images/generated-1784981132633.png',
   '/images/generated-1784981132692.png'
 ]
+
 const names = [
   'Щётка стеклоочистителя DAN 400 мм',
   'Щётка стеклоочистителя DAN 500 мм',
@@ -45,25 +71,26 @@ const names = [
   'Комплект щёток DAN Twin 600/450',
   'Щётка стеклоочистителя DAN Premium'
 ]
-export const products: Product[] = Array.from({ length: 48 }, (_, i) => ({
-  id: i === 0 ? 'lw-600' : `dan-wb-${String(i + 1).padStart(3, '0')}`,
-  sku: i === 0 ? 'LW-600' : `DAN-WB-${String(i + 1).padStart(3, '0')}`,
-  name: names[i % names.length]!,
+
+export const products: CatalogFixtureProduct[] = Array.from({ length: 48 }, (_, index) => ({
+  id: index === 0 ? 'lw-600' : `dan-wb-${String(index + 1).padStart(3, '0')}`,
+  sku: index === 0 ? 'LW-600' : `DAN-WB-${String(index + 1).padStart(3, '0')}`,
+  name: names[index % names.length] ?? names[0]!,
   categoryId: 'wipers',
-  image: imgs[i % imgs.length]!,
+  image: images[index % images.length] ?? images[0]!,
   images:
-    i === 0
+    index === 0
       ? [
           '/images/generated-1784981152886.png',
           '/images/generated-1784981560925.png',
           '/images/generated-1784981561799.png',
           '/images/generated-1784981561547.png'
         ]
-      : [imgs[i % imgs.length]!],
-  type: ['Бескаркасная', 'Каркасная', 'Гибридная'][i % 3]!,
-  side: i % 5 === 0 ? 'Задняя' : 'Передняя',
-  length: [300, 400, 500, 600][i % 4]!,
-  mount: ['Hook', 'Push Button', 'Pinch Tab'][i % 3]!,
+      : [images[index % images.length] ?? images[0]!],
+  type: ['Бескаркасная', 'Каркасная', 'Гибридная'][index % 3] ?? 'Бескаркасная',
+  side: index % 5 === 0 ? 'Задняя' : 'Передняя',
+  length: [300, 400, 500, 600][index % 4] ?? 400,
+  mount: ['Hook', 'Push Button', 'Pinch Tab'][index % 3] ?? 'Hook',
   material: 'Натуральный каучук с графитом',
   warranty: '12 месяцев',
   description:
@@ -79,44 +106,3 @@ export const products: Product[] = Array.from({ length: 48 }, (_, i) => ({
     'SUBARU FORESTER SK · 2018–2024'
   ]
 }))
-export const makes: VehicleMake[] = [
-  'Toyota',
-  'Honda',
-  'Mazda',
-  'Nissan',
-  'Subaru',
-  'Kia',
-  'Hyundai',
-  'Volkswagen'
-].map((name) => ({
-  id: name.toLowerCase(),
-  name
-}))
-export const models: VehicleModel[] = [
-  {
-    id: 'camry',
-    makeId: 'toyota',
-    name: 'Camry',
-    generations: ['XV70 · 2.5 бензин · 181 л.с. · 2018–2023', 'XV50 · 2.5 бензин · 2011–2017']
-  },
-  {
-    id: 'rav4',
-    makeId: 'toyota',
-    name: 'RAV4',
-    generations: ['XA50 · 2.0 бензин · 2019–2024', 'XA40 · 2.5 бензин · 2013–2019']
-  },
-  {
-    id: 'corolla',
-    makeId: 'toyota',
-    name: 'Corolla',
-    generations: ['E210 · 1.6 бензин · 2018–2024']
-  },
-  {
-    id: 'crv',
-    makeId: 'honda',
-    name: 'CR-V',
-    generations: ['RW · 2.4 бензин · 2017–2022']
-  },
-  { id: 'cx5', makeId: 'mazda', name: 'CX-5', generations: ['KF · 2.5 бензин · 2017–2024'] }
-]
-export const delay = () => new Promise((resolve) => setTimeout(resolve, 180))

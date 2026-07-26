@@ -1,6 +1,7 @@
-import { delay, makes } from '../../utils/mock-data'
+import { makes } from '../../fixtures/vehicles'
+import { mockDelay } from '../../utils/mock-delay'
 
 export default defineEventHandler(async () => {
-  await delay()
+  await mockDelay()
   return { data: makes }
 })

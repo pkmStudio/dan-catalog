@@ -1,0 +1,6 @@
+export { groups as catalogGroups, products as catalogProducts } from './catalog'
+export type { CatalogFixtureGroup, CatalogFixtureProduct } from './catalog'
+export { aboutContent, contactContent } from './content'
+export type { ContentSectionFixture } from './content'
+export { makes as vehicleMakes, models as vehicleModels } from './vehicles'
+export type { VehicleMakeFixture, VehicleModelFixture } from './vehicles'

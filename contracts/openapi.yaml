@@ -1,0 +1,768 @@
+# Tracked source of truth for frontend, Nitro mocks and the future backend.
+openapi: 3.1.0
+info:
+  title: DAN Catalog Frontend Data Contract
+  version: 1.0.0
+  description: >
+    Contract implemented by local Nuxt Nitro mocks now and by the external
+    backend later. All responses are JSON and all identifiers are opaque strings.
+servers:
+  - url: /api
+    description: Local Nitro mock adapter
+tags:
+  - name: Catalog
+  - name: Vehicles
+  - name: Content
+  - name: Inquiries
+
+paths:
+  /catalog/groups:
+    get:
+      tags: [Catalog]
+      operationId: getProductGroups
+      summary: List product groups
+      responses:
+        '200':
+          description: Product groups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductGroupListResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /catalog/groups/{groupId}/categories:
+    get:
+      tags: [Catalog]
+      operationId: getGroupCategories
+      summary: List categories in a group
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - $ref: '#/components/parameters/VehicleModificationIdOptional'
+      responses:
+        '200':
+          description: Categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /catalog/categories/{slug}/products:
+    get:
+      tags: [Catalog]
+      operationId: getCategoryProducts
+      summary: Get a filtered page of category products and facets
+      parameters:
+        - $ref: '#/components/parameters/CategorySlug'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: filter
+          in: query
+          description: Repeated category filter token in `key:value` form
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/VehicleModificationIdOptional'
+      responses:
+        '200':
+          description: Product page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPageResponse'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /catalog/products/{productId}:
+    get:
+      tags: [Catalog]
+      operationId: getProduct
+      summary: Get product detail
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /catalog/search:
+    get:
+      tags: [Catalog]
+      operationId: searchProducts
+      summary: Search products by SKU or name
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 8
+      responses:
+        '200':
+          description: Search outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /vehicles/makes:
+    get:
+      tags: [Vehicles]
+      operationId: getVehicleMakes
+      summary: List vehicle makes
+      responses:
+        '200':
+          description: Makes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleMakeListResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /vehicles/makes/{makeId}/models:
+    get:
+      tags: [Vehicles]
+      operationId: getVehicleModels
+      summary: List models for a make
+      parameters:
+        - $ref: '#/components/parameters/MakeId'
+      responses:
+        '200':
+          description: Models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleModelListResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /vehicles/models/{modelId}/modifications:
+    get:
+      tags: [Vehicles]
+      operationId: getVehicleModifications
+      summary: List modifications for a model
+      parameters:
+        - $ref: '#/components/parameters/ModelId'
+      responses:
+        '200':
+          description: Modifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleModificationListResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /vehicles/modifications/{modificationId}/categories:
+    get:
+      tags: [Vehicles]
+      operationId: getModificationCategories
+      summary: List categories applicable to a modification
+      parameters:
+        - $ref: '#/components/parameters/ModificationId'
+      responses:
+        '200':
+          description: Applicable categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /catalog/products/{productId}/compatibility:
+    get:
+      tags: [Catalog, Vehicles]
+      operationId: getProductCompatibility
+      summary: Check product compatibility with a modification
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/VehicleModificationIdRequired'
+      responses:
+        '200':
+          description: Compatibility result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityResponse'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /content/about:
+    get:
+      tags: [Content]
+      operationId: getAboutContent
+      summary: Get approved company content
+      responses:
+        '200':
+          description: About content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AboutResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /content/contacts:
+    get:
+      tags: [Content]
+      operationId: getContactContent
+      summary: Get company contacts
+      responses:
+        '200':
+          description: Contact content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactResponse'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+  /inquiries:
+    post:
+      tags: [Inquiries]
+      operationId: createInquiry
+      summary: Submit a general or product inquiry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryRequest'
+      responses:
+        '201':
+          description: Inquiry accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InquiryAcceptedResponse'
+        '422':
+          $ref: '#/components/responses/ApiError'
+        default:
+          $ref: '#/components/responses/ApiError'
+
+components:
+  parameters:
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    CategorySlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    MakeId:
+      name: makeId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ModelId:
+      name: modelId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ModificationId:
+      name: modificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    VehicleModificationIdOptional:
+      name: vehicleModificationId
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    VehicleModificationIdRequired:
+      name: vehicleModificationId
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        enum: [9]
+        default: 9
+
+  responses:
+    ApiError:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+
+  schemas:
+    Envelope:
+      type: object
+      required: [data]
+      properties:
+        data: {}
+
+    SeoDocument:
+      type: object
+      required: [title, description, canonicalPath]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        canonicalPath:
+          type: string
+          pattern: '^/'
+
+    ProductGroup:
+      type: object
+      required: [id, slug, name, description, image, sortOrder, categoryCount]
+      properties:
+        id: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        image: { type: string, minLength: 1 }
+        sortOrder: { type: integer, minimum: 0 }
+        categoryCount: { type: integer, minimum: 0 }
+
+    ProductGroupListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductGroup'
+
+    Category:
+      type: object
+      required: [id, groupId, slug, name, description, image, productCount]
+      properties:
+        id: { type: string, minLength: 1 }
+        groupId: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        image: { type: string, minLength: 1 }
+        productCount: { type: integer, minimum: 0 }
+
+    CategoryListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    ProductSummary:
+      type: object
+      required: [id, sku, name, image]
+      properties:
+        id: { type: string, minLength: 1 }
+        sku: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        image: { type: string, minLength: 1 }
+
+    ProductImage:
+      type: object
+      required: [src, alt, sortOrder]
+      properties:
+        src: { type: string, minLength: 1 }
+        alt: { type: string }
+        thumbnailSrc: { type: string }
+        sortOrder: { type: integer, minimum: 0 }
+
+    ProductSpecification:
+      type: object
+      required: [key, label, value, filterable]
+      properties:
+        key: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1 }
+        value:
+          oneOf:
+            - type: string
+            - type: number
+        unit: { type: string }
+        filterable: { type: boolean }
+
+    ProductAnalog:
+      type: object
+      required: [id, sku, name]
+      properties:
+        id: { type: string, minLength: 1 }
+        sku: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        productId: { type: string }
+        manufacturer: { type: string }
+
+    ApplicationSummary:
+      type: object
+      required: [modificationId, label]
+      properties:
+        modificationId: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1 }
+
+    Product:
+      allOf:
+        - $ref: '#/components/schemas/ProductSummary'
+        - type: object
+          required:
+            - categoryId
+            - description
+            - images
+            - specifications
+            - oemNumbers
+            - analogs
+            - applications
+            - seo
+          properties:
+            categoryId: { type: string, minLength: 1 }
+            description: { type: string, minLength: 1 }
+            images:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ProductImage'
+            specifications:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductSpecification'
+            oemNumbers:
+              type: array
+              items: { type: string }
+            analogs:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductAnalog'
+            applications:
+              type: array
+              items:
+                $ref: '#/components/schemas/ApplicationSummary'
+            seo:
+              $ref: '#/components/schemas/SeoDocument'
+
+    ProductResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Product'
+
+    FilterOption:
+      type: object
+      required: [value, label, count]
+      properties:
+        value: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1 }
+        count: { type: integer, minimum: 0 }
+
+    FilterFacet:
+      type: object
+      required: [key, label, kind, options]
+      properties:
+        key: { type: string, minLength: 1 }
+        label: { type: string, minLength: 1 }
+        kind:
+          type: string
+          enum: [enum, number]
+        options:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/FilterOption'
+
+    ProductPage:
+      type: object
+      required: [items, total, page, pageSize, pageCount, facets]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSummary'
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, enum: [9] }
+        pageCount: { type: integer, minimum: 0 }
+        facets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterFacet'
+
+    ProductPageResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ProductPage'
+
+    SearchResult:
+      type: object
+      required: [match, items]
+      properties:
+        match:
+          type: string
+          enum: [exact, multiple, empty]
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ProductSummary'
+
+    SearchResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/SearchResult'
+
+    VehicleMake:
+      type: object
+      required: [id, name, sortOrder]
+      properties:
+        id: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        sortOrder: { type: integer, minimum: 0 }
+
+    VehicleMakeListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleMake'
+
+    VehicleModel:
+      type: object
+      required: [id, makeId, name, sortOrder]
+      properties:
+        id: { type: string, minLength: 1 }
+        makeId: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        sortOrder: { type: integer, minimum: 0 }
+
+    VehicleModelListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleModel'
+
+    VehicleModification:
+      type: object
+      required: [id, modelId, generation, yearFrom, engine, displayName]
+      properties:
+        id: { type: string, minLength: 1 }
+        modelId: { type: string, minLength: 1 }
+        generation: { type: string, minLength: 1 }
+        yearFrom: { type: integer, minimum: 1900 }
+        yearTo: { type: integer, minimum: 1900 }
+        engine: { type: string, minLength: 1 }
+        powerHp: { type: integer, minimum: 1 }
+        displayName: { type: string, minLength: 1 }
+
+    VehicleModificationListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleModification'
+
+    CompatibilityResult:
+      type: object
+      required: [productId, modificationId, status, message, applications]
+      properties:
+        productId: { type: string, minLength: 1 }
+        modificationId: { type: string, minLength: 1 }
+        status:
+          type: string
+          enum: [compatible, incompatible, unknown]
+        message: { type: string, minLength: 1 }
+        applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationSummary'
+
+    CompatibilityResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CompatibilityResult'
+
+    AboutContent:
+      type: object
+      required: [heading, lead, sections, seo]
+      properties:
+        heading: { type: string, minLength: 1 }
+        lead: { type: string, minLength: 1 }
+        sections:
+          type: array
+          items:
+            type: object
+            required: [heading, body]
+            properties:
+              heading: { type: string, minLength: 1 }
+              body: { type: string, minLength: 1 }
+        seo:
+          $ref: '#/components/schemas/SeoDocument'
+
+    AboutResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AboutContent'
+
+    ContactContent:
+      type: object
+      required: [phone, email, address, workingHours, supportNote, seo]
+      properties:
+        phone: { type: string, minLength: 1 }
+        email: { type: string, format: email }
+        address: { type: string, minLength: 1 }
+        workingHours: { type: string, minLength: 1 }
+        supportNote: { type: string, minLength: 1 }
+        seo:
+          $ref: '#/components/schemas/SeoDocument'
+
+    ContactResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ContactContent'
+
+    InquiryRequest:
+      type: object
+      required: [type, name, phone, message, consent]
+      properties:
+        type:
+          type: string
+          enum: [general, product]
+        productId:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 2
+          maxLength: 32
+          pattern: '^[\p{L}\s-]+$'
+        phone:
+          type: string
+          pattern: '^\+7\d{10}$'
+        email:
+          type: string
+          format: email
+        message:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        consent:
+          const: true
+      allOf:
+        - if:
+            properties:
+              type:
+                const: product
+          then:
+            required: [productId]
+
+    InquiryAccepted:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string, minLength: 1 }
+        status:
+          const: accepted
+
+    InquiryAcceptedResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/InquiryAccepted'
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, minLength: 1 }
+        message: { type: string, minLength: 1 }
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: string
+        requestId: { type: string }
+
+    ApiErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ApiError'

@@ -1,7 +1,8 @@
-import { delay, models } from '../../utils/mock-data'
+import { models } from '../../fixtures/vehicles'
+import { mockDelay } from '../../utils/mock-delay'
 
 export default defineEventHandler(async (event) => {
-  await delay()
+  await mockDelay()
   const makeId = String(getQuery(event).makeId || '')
   return { data: models.filter((x) => x.makeId === makeId) }
 })

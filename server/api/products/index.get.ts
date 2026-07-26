@@ -1,12 +1,19 @@
-import type { CatalogFilters } from '~/types/catalog'
-import { delay, products } from '../../utils/mock-data'
+import { products } from '../../fixtures/catalog'
+import { mockDelay } from '../../utils/mock-delay'
+
+interface LegacyCatalogFilters {
+  types: string[]
+  sides: string[]
+  lengths: number[]
+  mounts: string[]
+}
 
 export default defineEventHandler(async (event) => {
-  await delay()
+  await mockDelay()
   const q = getQuery(event)
   const page = Number(q.page || 1),
     pageSize = Number(q.pageSize || 12)
-  let filters: CatalogFilters = { types: [], sides: [], lengths: [], mounts: [] }
+  let filters: LegacyCatalogFilters = { types: [], sides: [], lengths: [], mounts: [] }
   try {
     if (q.filters) filters = JSON.parse(String(q.filters))
   } catch {

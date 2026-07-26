@@ -1,7 +1,7 @@
-import { delay } from '../utils/mock-data'
+import { mockDelay } from '../utils/mock-delay'
 
 export default defineEventHandler(async (event) => {
-  await delay()
+  await mockDelay()
   const body = await readBody(event)
   if (!body?.name || !body?.phone || !body?.message)
     throw createError({

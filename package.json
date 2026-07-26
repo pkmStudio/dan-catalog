@@ -13,7 +13,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck && vue-tsc --noEmit -p tests/tsconfig.json"
   },
   "dependencies": {
     "@lucide/vue": "^1.27.0",
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.0.3",
+    "@types/node": "^26.1.1",
     "@vue/test-utils": "^2.4.11",
     "eslint": "^10.8.0",
     "happy-dom": "^20.11.1",

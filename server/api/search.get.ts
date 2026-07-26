@@ -1,7 +1,8 @@
-import { delay, products } from '../utils/mock-data'
+import { products } from '../fixtures/catalog'
+import { mockDelay } from '../utils/mock-delay'
 
 export default defineEventHandler(async (event) => {
-  await delay()
+  await mockDelay()
   const q = String(getQuery(event).q || '')
     .trim()
     .toLowerCase()
