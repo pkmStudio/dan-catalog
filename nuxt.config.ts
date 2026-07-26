@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'ru' },
-      title: 'DAN Auto Parts',
+      title: 'DAN - Каталог',
       meta: [{ name: 'description', content: 'Электронный каталог автозапчастей DAN' }],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
