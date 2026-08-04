@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { filterFacetSchema, type FilterFacet } from '~/entities/category'
+import { filterFacetSchema, type FilterFacet } from './filter-facet.schema'
 
 export const categorySchema = z.object({
   id: z.string().min(1),

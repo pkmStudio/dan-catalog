@@ -4,6 +4,11 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt', '@nuxt/eslint'],
   css: ['~/shared/assets/css/tokens.css', '~/shared/assets/css/main.css'],
   runtimeConfig: {
+    catalogBackend: {
+      baseUrl: '',
+      apiKey: '',
+      timeoutMs: 3000
+    },
     public: {
       apiBase: '/api'
     }

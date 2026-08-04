@@ -6,6 +6,7 @@ export interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: BodyInit | Record<string, unknown>
   headers?: Record<string, string>
+  apiBase?: string
 }
 
 const joinUrl = (base: string, path: string): string =>
@@ -16,8 +17,7 @@ export const apiRequest = async <T>(
   parser: ResponseParser<T>,
   options: ApiRequestOptions = {}
 ): Promise<T> => {
-  const config = useRuntimeConfig()
-  const apiBase = String(config.public.apiBase || '/api')
+  const apiBase = options.apiBase ?? String(useRuntimeConfig().public.apiBase || '/api')
 
   try {
     const response: unknown = await $fetch(joinUrl(apiBase, path), {

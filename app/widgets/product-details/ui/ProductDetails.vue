@@ -20,6 +20,7 @@ const tab = ref<'applications' | 'oem' | 'analogs'>('applications')
       </div>
       <h1>{{ product.name }}</h1>
       <p class="description">{{ product.description }}</p>
+      <slot name="compatibility" />
       <ProductSpecifications :specifications="product.specifications" />
       <section class="tabs">
         <div class="tab-buttons" role="tablist" aria-label="Информация о товаре">

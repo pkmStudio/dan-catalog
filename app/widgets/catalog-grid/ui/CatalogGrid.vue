@@ -31,7 +31,12 @@ const reset = () => {
       <ActiveFilterChips :facets="result.facets" @change="emit('navigate')" />
       <template v-if="result.items.length">
         <div class="products-grid">
-          <ProductCard v-for="product in result.items" :key="product.id" :product="product" />
+          <ProductCard
+            v-for="product in result.items"
+            :key="product.id"
+            :product="product"
+            :vehicle-modification-id="store.vehicleModificationId"
+          />
         </div>
         <AppPagination :page="result.page" :page-count="result.pageCount" @update:page="setPage" />
       </template>

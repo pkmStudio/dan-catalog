@@ -3,9 +3,9 @@ import { catalogCategories as categories, catalogProducts as products } from '..
 import {
   filterCatalogProducts,
   parseFilterTokens
-} from '#server/domain/catalog/filter-products.ts'
-import { mockDelay } from '#server/utils/mock-delay.ts'
-import { mockResponse, throwMockError } from '#server/utils/mock-response.ts'
+} from '../../../../domain/catalog/filter-products'
+import { mockDelay } from '../../../../utils/mock-delay'
+import { mockResponse, throwMockError } from '../../../../utils/mock-response'
 
 const toSummary = (product: (typeof products)[number]) => ({
   id: product.id,

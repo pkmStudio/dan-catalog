@@ -1,14 +1,26 @@
 <script setup lang="ts">
 import { productPageResponseSchema } from '~/entities/product'
 import { useCatalogStateStore } from '~/features/filter-products'
+import { useVehicleSelectionStore } from '~/features/select-vehicle'
 import { apiRequest, getCategoryProducts } from '~/shared/api'
 import { LoadingState, RecoverableError } from '~/shared/ui/async-state'
 import { CatalogGrid } from '~/widgets/catalog-grid'
+import { SelectedVehicle } from '~/widgets/selected-vehicle'
 
 const route = useRoute()
 const router = useRouter()
 const store = useCatalogStateStore()
+const vehicleStore = useVehicleSelectionStore()
 const slug = computed(() => String(route.params.slug))
+
+store.restore(slug.value, route.query)
+if (store.vehicleModificationId) {
+  const context = await vehicleStore.resolveFromUrl(store.vehicleModificationId)
+  if (!context && vehicleStore.status === 'invalid') {
+    store.vehicleModificationId = undefined
+    await navigateTo({ path: route.path, query: store.serializedQuery }, { replace: true })
+  }
+}
 
 const loadProducts = () => {
   store.restore(slug.value, route.query)
@@ -91,6 +103,9 @@ useHead({ link: [{ rel: 'canonical', href: computed(() => `/category/${slug.valu
       @retry="refresh"
     />
     <template v-else-if="result">
+      <section v-if="vehicleStore.confirmed" class="content-section vehicle-context">
+        <SelectedVehicle :context="vehicleStore.confirmed" />
+      </section>
       <CatalogGrid :result="result" @navigate="navigate" />
     </template>
   </main>

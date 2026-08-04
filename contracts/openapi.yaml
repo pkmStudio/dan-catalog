@@ -1,14 +1,16 @@
-# Tracked source of truth for frontend, Nitro mocks and the future backend.
+# Stable browser/SSR -> Nitro BFF contract. Upstream backend DTOs are validated
+# and mapped server-side and may use different paths or field names.
 openapi: 3.1.0
 info:
-  title: DAN Catalog Frontend Data Contract
-  version: 1.0.0
+  title: DAN Catalog BFF Contract
+  version: 2.0.0
   description: >
-    Contract implemented by local Nuxt Nitro mocks now and by the external
-    backend later. All responses are JSON and all identifiers are opaque strings.
+    Same-origin contract consumed by the Nuxt application. Categories are flat,
+    nomenclatures are keyed by part_number, and applicability unknown states are
+    safe local projections rather than authoritative backend facts.
 servers:
   - url: /api
-    description: Local Nitro mock adapter
+    description: Nitro BFF
 tags:
   - name: Catalog
   - name: Vehicles
@@ -16,32 +18,14 @@ tags:
   - name: Inquiries
 
 paths:
-  /catalog/groups:
+  /catalog/categories:
     get:
       tags: [Catalog]
-      operationId: getProductGroups
-      summary: List product groups
+      operationId: getCategories
+      summary: List flat catalog categories
       responses:
         '200':
-          description: Product groups
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductGroupListResponse'
-        default:
-          $ref: '#/components/responses/ApiError'
-
-  /catalog/groups/{groupId}/categories:
-    get:
-      tags: [Catalog]
-      operationId: getGroupCategories
-      summary: List categories in a group
-      parameters:
-        - $ref: '#/components/parameters/GroupId'
-        - $ref: '#/components/parameters/VehicleModificationIdOptional'
-      responses:
-        '200':
-          description: Categories
+          description: Flat categories
           content:
             application/json:
               schema:
@@ -49,51 +33,50 @@ paths:
         default:
           $ref: '#/components/responses/ApiError'
 
-  /catalog/categories/{slug}/products:
+  /catalog/categories/{categorySlug}/nomenclatures:
     get:
       tags: [Catalog]
-      operationId: getCategoryProducts
-      summary: Get a filtered page of category products and facets
+      operationId: getCategoryNomenclatures
+      summary: Get a filtered page of category nomenclatures and facets
       parameters:
         - $ref: '#/components/parameters/CategorySlug'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
         - name: filter
           in: query
-          description: Repeated category filter token in `key:value` form
+          description: Repeated category filter token in key:value form
           schema:
             type: array
-            items:
-              type: string
+            items: { type: string }
           style: form
           explode: true
         - $ref: '#/components/parameters/VehicleModificationIdOptional'
       responses:
         '200':
-          description: Product page
+          description: Nomenclature page
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductPageResponse'
+                $ref: '#/components/schemas/NomenclaturePageResponse'
         '404':
           $ref: '#/components/responses/ApiError'
         default:
           $ref: '#/components/responses/ApiError'
 
-  /catalog/products/{productId}:
+  /catalog/nomenclatures/{part_number}:
     get:
       tags: [Catalog]
-      operationId: getProduct
-      summary: Get product detail
+      operationId: getNomenclature
+      summary: Get nomenclature detail by part number
       parameters:
-        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/PartNumber'
       responses:
         '200':
-          description: Product detail
+          description: Nomenclature detail
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductResponse'
+                $ref: '#/components/schemas/NomenclatureResponse'
         '404':
           $ref: '#/components/responses/ApiError'
         default:
@@ -102,8 +85,8 @@ paths:
   /catalog/search:
     get:
       tags: [Catalog]
-      operationId: searchProducts
-      summary: Search products by SKU or name
+      operationId: searchNomenclatures
+      summary: Search nomenclatures by part_number or name
       parameters:
         - name: q
           in: query
@@ -130,91 +113,104 @@ paths:
         default:
           $ref: '#/components/responses/ApiError'
 
-  /vehicles/makes:
+  /vehicles/manufacturers:
     get:
       tags: [Vehicles]
-      operationId: getVehicleMakes
-      summary: List vehicle makes
+      operationId: getVehicleManufacturers
+      summary: List manufacturers with allowed vehicles
       responses:
         '200':
-          description: Makes
+          description: Ordered manufacturers with at least one allowed vehicle
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VehicleMakeListResponse'
+                $ref: '#/components/schemas/VehicleManufacturerListResponse'
         default:
           $ref: '#/components/responses/ApiError'
 
-  /vehicles/makes/{makeId}/models:
+  /vehicles/manufacturers/{manufacturerId}/vehicles:
     get:
       tags: [Vehicles]
-      operationId: getVehicleModels
-      summary: List models for a make
+      operationId: getManufacturerVehicles
+      summary: List allowed vehicles for a manufacturer
       parameters:
-        - $ref: '#/components/parameters/MakeId'
+        - $ref: '#/components/parameters/ManufacturerId'
       responses:
         '200':
-          description: Models
+          description: Ordered allowed vehicles for the manufacturer
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VehicleModelListResponse'
+                $ref: '#/components/schemas/CatalogVehicleListResponse'
+        '404':
+          $ref: '#/components/responses/ApiError'
         default:
           $ref: '#/components/responses/ApiError'
 
-  /vehicles/models/{modelId}/modifications:
+  /vehicles/{vehicleId}/modifications:
     get:
       tags: [Vehicles]
       operationId: getVehicleModifications
-      summary: List modifications for a model
+      summary: List modifications for an allowed vehicle
       parameters:
-        - $ref: '#/components/parameters/ModelId'
+        - $ref: '#/components/parameters/VehicleId'
       responses:
         '200':
-          description: Modifications
+          description: Modifications for an allowed vehicle, newest first
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/VehicleModificationListResponse'
+        '404':
+          $ref: '#/components/responses/ApiError'
         default:
           $ref: '#/components/responses/ApiError'
 
-  /vehicles/modifications/{modificationId}/categories:
+  /vehicles/modifications/{modificationId}:
     get:
       tags: [Vehicles]
-      operationId: getModificationCategories
-      summary: List categories applicable to a modification
+      operationId: getVehicleModificationContext
+      summary: Get the full context of an allowed vehicle modification
       parameters:
         - $ref: '#/components/parameters/ModificationId'
       responses:
         '200':
-          description: Applicable categories
+          description: Manufacturer, vehicle and modification context
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CategoryListResponse'
+                $ref: '#/components/schemas/VehicleModificationContextResponse'
         '404':
           $ref: '#/components/responses/ApiError'
         default:
           $ref: '#/components/responses/ApiError'
 
-  /catalog/products/{productId}/compatibility:
+  /catalog/nomenclatures/{part_number}/applicability:
     get:
       tags: [Catalog, Vehicles]
-      operationId: getProductCompatibility
-      summary: Check product compatibility with a modification
+      operationId: getNomenclatureApplicability
+      summary: Resolve nomenclature applicability for a vehicle modification
+      description: >
+        Only explicit upstream compatible/incompatible facts are conclusive.
+        The BFF may return unknown when no relation exists. Transport or invalid
+        upstream responses are returned as errors and the UI projects them to a
+        retryable unknown state.
       parameters:
-        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/PartNumber'
         - $ref: '#/components/parameters/VehicleModificationIdRequired'
       responses:
         '200':
-          description: Compatibility result
+          description: Applicability result
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CompatibilityResponse'
+                $ref: '#/components/schemas/ApplicabilityResponse'
         '404':
-          $ref: '#/components/responses/ApiError'
+          description: Unknown nomenclature or modification, not a missing relation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
         default:
           $ref: '#/components/responses/ApiError'
 
@@ -252,7 +248,7 @@ paths:
     post:
       tags: [Inquiries]
       operationId: createInquiry
-      summary: Submit a general or product inquiry
+      summary: Submit a general or nomenclature inquiry
       requestBody:
         required: true
         content:
@@ -273,48 +269,41 @@ paths:
 
 components:
   parameters:
-    GroupId:
-      name: groupId
-      in: path
-      required: true
-      schema:
-        type: string
-        minLength: 1
     CategorySlug:
-      name: slug
+      name: categorySlug
       in: path
       required: true
       schema:
         type: string
         minLength: 1
-    ProductId:
-      name: productId
+    PartNumber:
+      name: part_number
       in: path
       required: true
       schema:
         type: string
         minLength: 1
-    MakeId:
-      name: makeId
+    ManufacturerId:
+      name: manufacturerId
       in: path
       required: true
       schema:
-        type: string
-        minLength: 1
-    ModelId:
-      name: modelId
+        type: integer
+        minimum: 1
+    VehicleId:
+      name: vehicleId
       in: path
       required: true
       schema:
-        type: string
-        minLength: 1
+        type: integer
+        minimum: 1
     ModificationId:
       name: modificationId
       in: path
       required: true
       schema:
-        type: string
-        minLength: 1
+        type: integer
+        minimum: 1
     VehicleModificationIdOptional:
       name: vehicleModificationId
       in: query
@@ -346,68 +335,38 @@ components:
 
   responses:
     ApiError:
-      description: Error response
+      description: Normalized safe error response
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiErrorResponse'
 
   schemas:
-    Envelope:
-      type: object
-      required: [data]
-      properties:
-        data: {}
-
     SeoDocument:
       type: object
+      additionalProperties: false
       required: [title, description, canonicalPath]
       properties:
-        title:
-          type: string
-          minLength: 1
-        description:
-          type: string
-          minLength: 1
-        canonicalPath:
-          type: string
-          pattern: '^/'
-
-    ProductGroup:
-      type: object
-      required: [id, slug, name, description, icon, sortOrder, categoryCount]
-      properties:
-        id: { type: string, minLength: 1 }
-        slug: { type: string, minLength: 1 }
-        name: { type: string, minLength: 1 }
-        description: { type: string }
-        icon: { type: string, minLength: 1 }
-        sortOrder: { type: integer, minimum: 0 }
-        categoryCount: { type: integer, minimum: 0 }
-
-    ProductGroupListResponse:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductGroup'
+        title: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        canonicalPath: { type: string, pattern: '^/' }
 
     Category:
       type: object
-      required: [id, groupId, slug, name, description, image, productCount]
+      additionalProperties: false
+      required: [id, slug, name, description, image, sortOrder, nomenclatureCount]
       properties:
         id: { type: string, minLength: 1 }
-        groupId: { type: string, minLength: 1 }
         slug: { type: string, minLength: 1 }
         name: { type: string, minLength: 1 }
         description: { type: string }
         image: { type: string, minLength: 1 }
-        productCount: { type: integer, minimum: 0 }
+        sortOrder: { type: integer, minimum: 0 }
+        nomenclatureCount: { type: integer, minimum: 0 }
 
     CategoryListResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
@@ -415,17 +374,17 @@ components:
           items:
             $ref: '#/components/schemas/Category'
 
-    ProductSummary:
+    NomenclatureSummary:
       type: object
-      required: [id, sku, name, image]
+      required: [part_number, name, image]
       properties:
-        id: { type: string, minLength: 1 }
-        sku: { type: string, minLength: 1 }
+        part_number: { type: string, minLength: 1 }
         name: { type: string, minLength: 1 }
         image: { type: string, minLength: 1 }
 
-    ProductImage:
+    NomenclatureImage:
       type: object
+      additionalProperties: false
       required: [src, alt, sortOrder]
       properties:
         src: { type: string, minLength: 1 }
@@ -433,8 +392,9 @@ components:
         thumbnailSrc: { type: string }
         sortOrder: { type: integer, minimum: 0 }
 
-    ProductSpecification:
+    NomenclatureSpecification:
       type: object
+      additionalProperties: false
       required: [key, label, value, filterable]
       properties:
         key: { type: string, minLength: 1 }
@@ -446,26 +406,27 @@ components:
         unit: { type: string }
         filterable: { type: boolean }
 
-    ProductAnalog:
+    NomenclatureAnalog:
       type: object
-      required: [id, sku, name]
+      additionalProperties: false
+      required: [part_number, name]
       properties:
-        id: { type: string, minLength: 1 }
-        sku: { type: string, minLength: 1 }
+        part_number: { type: string, minLength: 1 }
         name: { type: string, minLength: 1 }
-        productId: { type: string }
+        linked_part_number: { type: string, minLength: 1 }
         manufacturer: { type: string }
 
-    ApplicationSummary:
+    ApplicationEvidence:
       type: object
+      additionalProperties: false
       required: [modificationId, label]
       properties:
         modificationId: { type: string, minLength: 1 }
         label: { type: string, minLength: 1 }
 
-    Product:
+    Nomenclature:
       allOf:
-        - $ref: '#/components/schemas/ProductSummary'
+        - $ref: '#/components/schemas/NomenclatureSummary'
         - type: object
           required:
             - categoryId
@@ -483,34 +444,36 @@ components:
               type: array
               minItems: 1
               items:
-                $ref: '#/components/schemas/ProductImage'
+                $ref: '#/components/schemas/NomenclatureImage'
             specifications:
               type: array
               items:
-                $ref: '#/components/schemas/ProductSpecification'
+                $ref: '#/components/schemas/NomenclatureSpecification'
             oemNumbers:
               type: array
               items: { type: string }
             analogs:
               type: array
               items:
-                $ref: '#/components/schemas/ProductAnalog'
+                $ref: '#/components/schemas/NomenclatureAnalog'
             applications:
               type: array
               items:
-                $ref: '#/components/schemas/ApplicationSummary'
+                $ref: '#/components/schemas/ApplicationEvidence'
             seo:
               $ref: '#/components/schemas/SeoDocument'
 
-    ProductResponse:
+    NomenclatureResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/Product'
+          $ref: '#/components/schemas/Nomenclature'
 
     FilterOption:
       type: object
+      additionalProperties: false
       required: [value, label, count]
       properties:
         value: { type: string, minLength: 1 }
@@ -519,29 +482,29 @@ components:
 
     FilterFacet:
       type: object
+      additionalProperties: false
       required: [key, label, kind, options]
       properties:
         key: { type: string, minLength: 1 }
         label: { type: string, minLength: 1 }
-        kind:
-          type: string
-          enum: [enum, number]
+        kind: { type: string, enum: [enum, number] }
         options:
           type: array
           minItems: 1
           items:
             $ref: '#/components/schemas/FilterOption'
 
-    ProductPage:
+    NomenclaturePage:
       type: object
-      required: [categoryName, categoryDescription, items, total, page, pageSize, pageCount, facets]
+      additionalProperties: false
+      required: [category, items, total, page, pageSize, pageCount, facets]
       properties:
-        categoryName: { type: string, minLength: 1 }
-        categoryDescription: { type: string }
+        category:
+          $ref: '#/components/schemas/Category'
         items:
           type: array
           items:
-            $ref: '#/components/schemas/ProductSummary'
+            $ref: '#/components/schemas/NomenclatureSummary'
         total: { type: integer, minimum: 0 }
         page: { type: integer, minimum: 1 }
         pageSize: { type: integer, enum: [9] }
@@ -551,83 +514,126 @@ components:
           items:
             $ref: '#/components/schemas/FilterFacet'
 
-    ProductPageResponse:
+    NomenclaturePageResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/ProductPage'
+          $ref: '#/components/schemas/NomenclaturePage'
 
     SearchResult:
       type: object
+      additionalProperties: false
       required: [match, items]
       properties:
-        match:
-          type: string
-          enum: [exact, multiple, empty]
+        match: { type: string, enum: [exact, multiple, empty] }
         items:
           type: array
           maxItems: 20
           items:
-            $ref: '#/components/schemas/ProductSummary'
+            $ref: '#/components/schemas/NomenclatureSummary'
 
     SearchResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
           $ref: '#/components/schemas/SearchResult'
 
-    VehicleMake:
+    VehicleManufacturer:
       type: object
-      required: [id, name, sortOrder]
+      additionalProperties: false
+      required: [id, mfaId, name]
       properties:
-        id: { type: string, minLength: 1 }
+        id: { type: integer, minimum: 1 }
+        mfaId: { type: integer }
         name: { type: string, minLength: 1 }
-        sortOrder: { type: integer, minimum: 0 }
 
-    VehicleMakeListResponse:
+    VehicleManufacturerListResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/VehicleMake'
+            $ref: '#/components/schemas/VehicleManufacturer'
 
-    VehicleModel:
+    CatalogVehicle:
       type: object
-      required: [id, makeId, name, sortOrder]
+      additionalProperties: false
+      required:
+        - id
+        - msId
+        - manufacturerId
+        - name
+        - localizedName
+        - generation
+        - generationShort
+        - yearFrom
+        - yearTo
       properties:
-        id: { type: string, minLength: 1 }
-        makeId: { type: string, minLength: 1 }
+        id: { type: integer, minimum: 1 }
+        msId: { type: integer }
+        manufacturerId: { type: integer, minimum: 1 }
         name: { type: string, minLength: 1 }
-        sortOrder: { type: integer, minimum: 0 }
+        localizedName: { type: [string, 'null'], minLength: 1 }
+        generation: { type: [string, 'null'], minLength: 1 }
+        generationShort: { type: [string, 'null'], minLength: 1 }
+        yearFrom: { type: [integer, 'null'] }
+        yearTo: { type: [integer, 'null'] }
 
-    VehicleModelListResponse:
+    CatalogVehicleListResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/VehicleModel'
+            $ref: '#/components/schemas/CatalogVehicle'
 
     VehicleModification:
       type: object
-      required: [id, modelId, generation, yearFrom, engine, displayName]
+      additionalProperties: false
+      required:
+        - id
+        - modId
+        - vehicleId
+        - msId
+        - yearFrom
+        - yearTo
+        - description
+        - powerPs
+        - powerKw
+        - engineType
+        - gearType
+        - driveType
+        - brakeSystemType
+        - numberOfCylinders
+        - capacityLt
       properties:
-        id: { type: string, minLength: 1 }
-        modelId: { type: string, minLength: 1 }
-        generation: { type: string, minLength: 1 }
-        yearFrom: { type: integer, minimum: 1900 }
-        yearTo: { type: integer, minimum: 1900 }
-        engine: { type: string, minLength: 1 }
-        powerHp: { type: integer, minimum: 1 }
-        displayName: { type: string, minLength: 1 }
+        id: { type: integer, minimum: 1 }
+        modId: { type: integer }
+        vehicleId: { type: integer, minimum: 1 }
+        msId: { type: integer }
+        yearFrom: { type: [integer, 'null'] }
+        yearTo: { type: [integer, 'null'] }
+        description: { type: [string, 'null'], minLength: 1 }
+        powerPs: { type: [integer, 'null'], minimum: 0 }
+        powerKw: { type: [integer, 'null'], minimum: 0 }
+        engineType: { type: [string, 'null'], minLength: 1 }
+        gearType: { type: [string, 'null'], minLength: 1 }
+        driveType: { type: [string, 'null'], minLength: 1 }
+        brakeSystemType: { type: [string, 'null'], minLength: 1 }
+        numberOfCylinders: { type: [integer, 'null'], minimum: 1 }
+        capacityLt: { type: [number, 'null'], minimum: 0 }
 
     VehicleModificationListResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
@@ -635,30 +641,59 @@ components:
           items:
             $ref: '#/components/schemas/VehicleModification'
 
-    CompatibilityResult:
+    VehicleModificationContext:
       type: object
-      required: [productId, modificationId, status, message, applications]
+      additionalProperties: false
+      required: [manufacturer, vehicle, modification]
       properties:
-        productId: { type: string, minLength: 1 }
-        modificationId: { type: string, minLength: 1 }
-        status:
-          type: string
-          enum: [compatible, incompatible, unknown]
-        message: { type: string, minLength: 1 }
-        applications:
-          type: array
-          items:
-            $ref: '#/components/schemas/ApplicationSummary'
+        manufacturer:
+          $ref: '#/components/schemas/VehicleManufacturer'
+        vehicle:
+          $ref: '#/components/schemas/CatalogVehicle'
+        modification:
+          $ref: '#/components/schemas/VehicleModification'
 
-    CompatibilityResponse:
+    VehicleModificationContextResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
-          $ref: '#/components/schemas/CompatibilityResult'
+          $ref: '#/components/schemas/VehicleModificationContext'
+
+    ApplicabilityResult:
+      type: object
+      additionalProperties: false
+      required: [part_number, modificationId, status, message, evidence, retryable]
+      properties:
+        part_number: { type: string, minLength: 1 }
+        modificationId: { type: string, minLength: 1 }
+        status: { type: string, enum: [compatible, incompatible, unknown] }
+        reason: { type: string, enum: [no_data, temporarily_unavailable, invalid_response] }
+        message: { type: string, minLength: 1 }
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationEvidence'
+        retryable: { type: boolean }
+      allOf:
+        - if:
+            properties:
+              status: { const: unknown }
+          then:
+            required: [reason]
+
+    ApplicabilityResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/ApplicabilityResult'
 
     AboutContent:
       type: object
+      additionalProperties: false
       required: [heading, lead, sections, seo]
       properties:
         heading: { type: string, minLength: 1 }
@@ -667,6 +702,7 @@ components:
           type: array
           items:
             type: object
+            additionalProperties: false
             required: [heading, body]
             properties:
               heading: { type: string, minLength: 1 }
@@ -676,6 +712,7 @@ components:
 
     AboutResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
@@ -683,6 +720,7 @@ components:
 
     ContactContent:
       type: object
+      additionalProperties: false
       required: [phone, email, address, workingHours, supportNote, seo]
       properties:
         phone: { type: string, minLength: 1 }
@@ -695,6 +733,7 @@ components:
 
     ContactResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
@@ -702,49 +741,38 @@ components:
 
     InquiryRequest:
       type: object
+      additionalProperties: false
       required: [type, name, phone, message, consent]
       properties:
-        type:
-          type: string
-          enum: [general, product]
-        productId:
-          type: string
-          minLength: 1
+        type: { type: string, enum: [general, product] }
+        part_number: { type: string, minLength: 1 }
         name:
           type: string
           minLength: 2
           maxLength: 32
           pattern: '^[\p{L}\s-]+$'
-        phone:
-          type: string
-          pattern: '^\+7\d{10}$'
-        email:
-          type: string
-          format: email
-        message:
-          type: string
-          minLength: 10
-          maxLength: 1000
-        consent:
-          const: true
+        phone: { type: string, pattern: '^\+7\d{10}$' }
+        email: { type: string, format: email }
+        message: { type: string, minLength: 10, maxLength: 1000 }
+        consent: { const: true }
       allOf:
         - if:
             properties:
-              type:
-                const: product
+              type: { const: product }
           then:
-            required: [productId]
+            required: [part_number]
 
     InquiryAccepted:
       type: object
+      additionalProperties: false
       required: [id, status]
       properties:
         id: { type: string, minLength: 1 }
-        status:
-          const: accepted
+        status: { const: accepted }
 
     InquiryAcceptedResponse:
       type: object
+      additionalProperties: false
       required: [data]
       properties:
         data:
@@ -752,18 +780,19 @@ components:
 
     ApiError:
       type: object
+      additionalProperties: false
       required: [code, message]
       properties:
         code: { type: string, minLength: 1 }
         message: { type: string, minLength: 1 }
         fieldErrors:
           type: object
-          additionalProperties:
-            type: string
+          additionalProperties: { type: string }
         requestId: { type: string }
 
     ApiErrorResponse:
       type: object
+      additionalProperties: false
       required: [error]
       properties:
         error:

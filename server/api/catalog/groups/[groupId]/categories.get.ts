@@ -1,7 +1,7 @@
 import { eventHandler, getRouterParam } from 'h3'
 import { catalogCategories as categories, catalogGroups as groups } from '../../../../fixtures'
-import { mockDelay } from '#server/utils/mock-delay.ts'
-import { mockResponse, throwMockError } from '#server/utils/mock-response.ts'
+import { mockDelay } from '../../../../utils/mock-delay'
+import { mockResponse, throwMockError } from '../../../../utils/mock-response'
 
 export const buildGroupCategoriesResponse = (groupId: string | undefined) => {
   if (!groupId || !groups.some((group) => group.id === groupId)) {

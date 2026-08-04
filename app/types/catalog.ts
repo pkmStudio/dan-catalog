@@ -24,26 +24,6 @@ export interface Product {
   applications: string[]
 }
 
-export interface VehicleMake {
-  id: string
-  name: string
-}
-
-export interface VehicleModel {
-  id: string
-  makeId: string
-  name: string
-  generations: string[]
-}
-
-export interface VehicleSelection {
-  makeId: string
-  makeName: string
-  modelId: string
-  modelName: string
-  modification: string
-}
-
 export interface CatalogFilters {
   types: string[]
   sides: string[]
