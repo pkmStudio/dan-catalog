@@ -1,58 +1,78 @@
 import { z } from 'zod'
 
-export const vehicleMakeSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  sortOrder: z.number().int().nonnegative()
-})
+const positiveId = z.number().int().positive()
+const nullableText = z.string().trim().min(1).nullable()
 
-export const vehicleModelSchema = z.object({
-  id: z.string().min(1),
-  makeId: z.string().min(1),
-  name: z.string().min(1),
-  sortOrder: z.number().int().nonnegative()
-})
+export const vehicleManufacturerSchema = z
+  .object({
+    id: positiveId,
+    mfaId: z.number().int(),
+    name: z.string().trim().min(1)
+  })
+  .strict()
+
+export const catalogVehicleSchema = z
+  .object({
+    id: positiveId,
+    msId: z.number().int(),
+    manufacturerId: positiveId,
+    name: z.string().trim().min(1),
+    localizedName: nullableText,
+    generation: nullableText,
+    generationShort: nullableText,
+    carcase: z.string().trim().min(1),
+    yearFrom: z.number().int().nullable(),
+    yearTo: z.number().int().nullable()
+  })
+  .strict()
 
 export const vehicleModificationSchema = z
   .object({
-    id: z.string().min(1),
-    modelId: z.string().min(1),
-    generation: z.string().min(1),
-    yearFrom: z.number().int().min(1900),
-    yearTo: z.number().int().min(1900).optional(),
-    engine: z.string().min(1),
-    powerHp: z.number().int().positive().optional(),
-    displayName: z.string().min(1)
+    id: positiveId,
+    modId: z.number().int(),
+    vehicleId: positiveId,
+    msId: z.number().int(),
+    yearFrom: z.number().int().nullable(),
+    yearTo: z.number().int().nullable(),
+    description: nullableText,
+    powerPs: z.number().int().nonnegative().nullable(),
+    powerKw: z.number().int().nonnegative().nullable(),
+    engineType: nullableText,
+    gearType: nullableText,
+    driveType: nullableText,
+    brakeSystemType: nullableText,
+    numberOfCylinders: z.number().int().positive().nullable(),
+    capacityLt: z.number().nonnegative().nullable()
   })
-  .refine(
-    (modification) =>
-      modification.yearTo === undefined || modification.yearTo >= modification.yearFrom,
-    { message: 'Год окончания выпуска не может быть раньше года начала.', path: ['yearTo'] }
-  )
+  .strict()
 
-export const vehicleContextSchema = z.object({
-  make: vehicleMakeSchema,
-  model: vehicleModelSchema,
-  modification: vehicleModificationSchema,
-  displayName: z.string().min(1)
+export const vehicleModificationContextSchema = z
+  .object({
+    manufacturer: vehicleManufacturerSchema,
+    vehicle: catalogVehicleSchema,
+    modification: vehicleModificationSchema
+  })
+  .strict()
+
+export const vehicleManufacturerListResponseSchema = z.object({
+  data: z.array(vehicleManufacturerSchema)
 })
-
-export const applicationSummarySchema = z.object({
-  modificationId: z.string().min(1),
-  label: z.string().min(1)
-})
-
-export const vehicleMakeListResponseSchema = z.object({ data: z.array(vehicleMakeSchema) })
-export const vehicleModelListResponseSchema = z.object({ data: z.array(vehicleModelSchema) })
+export const catalogVehicleListResponseSchema = z.object({ data: z.array(catalogVehicleSchema) })
 export const vehicleModificationListResponseSchema = z.object({
   data: z.array(vehicleModificationSchema)
 })
+export const vehicleModificationContextResponseSchema = z.object({
+  data: vehicleModificationContextSchema
+})
 
-export type VehicleMake = z.infer<typeof vehicleMakeSchema>
-export type VehicleModel = z.infer<typeof vehicleModelSchema>
+export type VehicleManufacturer = z.infer<typeof vehicleManufacturerSchema>
+export type CatalogVehicle = z.infer<typeof catalogVehicleSchema>
 export type VehicleModification = z.infer<typeof vehicleModificationSchema>
-export type VehicleContext = z.infer<typeof vehicleContextSchema>
-export type ApplicationSummary = z.infer<typeof applicationSummarySchema>
-export type VehicleMakeListResponse = z.infer<typeof vehicleMakeListResponseSchema>
-export type VehicleModelListResponse = z.infer<typeof vehicleModelListResponseSchema>
+export type VehicleModificationContext = z.infer<typeof vehicleModificationContextSchema>
+export type VehicleContext = VehicleModificationContext & { displayName: string }
+export type VehicleManufacturerListResponse = z.infer<typeof vehicleManufacturerListResponseSchema>
+export type CatalogVehicleListResponse = z.infer<typeof catalogVehicleListResponseSchema>
 export type VehicleModificationListResponse = z.infer<typeof vehicleModificationListResponseSchema>
+export type VehicleModificationContextResponse = z.infer<
+  typeof vehicleModificationContextResponseSchema
+>

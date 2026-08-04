@@ -1,4 +1,5 @@
 export {
+  parsePositiveIntegerQuery,
   normalizeCatalogFilters,
   parseCatalogRouteState,
   replaceCatalogFilters,

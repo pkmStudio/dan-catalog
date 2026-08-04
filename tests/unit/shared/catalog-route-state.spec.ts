@@ -13,7 +13,7 @@ describe('catalog route state', () => {
         q: '  щётка   DAN ',
         filter: ['side:front', 'length:600', 'side:rear', 'side:front'],
         page: '02',
-        vehicleModificationId: ' camry-xv70 '
+        vehicleModificationId: '9001'
       })
     ).toEqual({
       categorySlug: 'wipers',
@@ -23,7 +23,7 @@ describe('catalog route state', () => {
         side: ['front', 'rear']
       },
       page: 1,
-      vehicleModificationId: 'camry-xv70'
+      vehicleModificationId: 9001
     })
   })
 
@@ -60,14 +60,14 @@ describe('catalog route state', () => {
         length: ['600', '400']
       },
       page: 3,
-      vehicleModificationId: 'camry-xv70'
+      vehicleModificationId: 9001
     })
 
     expect(serialized).toEqual({
       q: 'DAN',
       filter: ['length:400', 'length:600', 'side:front', 'side:rear'],
       page: '3',
-      vehicleModificationId: 'camry-xv70'
+      vehicleModificationId: '9001'
     })
   })
 
@@ -82,7 +82,7 @@ describe('catalog route state', () => {
       q: 'DAN',
       page: '4',
       filter: 'side:front',
-      vehicleModificationId: 'camry-xv70'
+      vehicleModificationId: '9001'
     })
 
     expect(replaceCatalogFilters(state, { length: ['600'] })).toEqual({
@@ -90,7 +90,19 @@ describe('catalog route state', () => {
       query: 'DAN',
       filters: { length: ['600'] },
       page: 1,
-      vehicleModificationId: 'camry-xv70'
+      vehicleModificationId: 9001
     })
+  })
+
+  it.each([
+    ['array', ['9001']],
+    ['zero', '0'],
+    ['negative', '-1'],
+    ['decimal', '1.5'],
+    ['unsafe', '9007199254740992']
+  ])('rejects %s modification identity at the URL boundary', (_case, value) => {
+    expect(parseCatalogRouteState('wipers', { vehicleModificationId: value })).not.toHaveProperty(
+      'vehicleModificationId'
+    )
   })
 })

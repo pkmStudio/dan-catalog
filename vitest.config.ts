@@ -37,6 +37,16 @@ export default defineConfig({
           environment: 'node'
         }
       },
+      {
+        resolve: {
+          alias: aliases
+        },
+        test: {
+          name: 'integration',
+          include: ['tests/integration/**/*.spec.ts'],
+          environment: 'node'
+        }
+      },
       await defineVitestProject({
         test: {
           name: 'nuxt',

@@ -4,7 +4,7 @@ import { ImageFallback } from '~/shared/ui/image-fallback'
 
 defineProps<{
   product: ProductSummary
-  vehicleModificationId?: string
+  vehicleModificationId?: number
 }>()
 </script>
 

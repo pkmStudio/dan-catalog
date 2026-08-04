@@ -91,9 +91,8 @@ describe('catalog journey', () => {
     const wrapper = await mountSuspended(ProductDetails, { props: { product } })
     const tabs = wrapper.findAll('[role="tab"]')
 
-    await tabs[1]?.trigger('click')
     expect(wrapper.text()).toContain('85212-0R040')
-    await tabs[2]?.trigger('click')
+    await tabs[1]?.trigger('click')
     expect(wrapper.get('a[href="/product/dan-wb-002"]').attributes('href')).toBe(
       '/product/dan-wb-002'
     )

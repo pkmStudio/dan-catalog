@@ -18,6 +18,7 @@ const octaviaVehicle = {
   localized_name: 'Октавия',
   generation: 'III (5E)',
   generation_short: 'A7',
+  type_carcase: 'Hatchback',
   year_from: 2013,
   year_to: 2020
 } as const
@@ -30,6 +31,7 @@ const superbVehicleWithNullableDetails = {
   localized_name: null,
   generation: null,
   generation_short: null,
+  type_carcase: 'Estate',
   year_from: null,
   year_to: null
 } as const

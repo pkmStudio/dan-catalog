@@ -7,13 +7,13 @@ export {
   getCategoryProducts,
   getContactContent,
   getGroupCategories,
-  getModificationCategories,
   getProduct,
-  getProductCompatibility,
   getProductGroups,
-  getVehicleMakes,
-  getVehicleModels,
+  getManufacturerVehicles,
+  getVehicleManufacturers,
+  getVehicleModificationContext,
   getVehicleModifications,
+  vehicleEndpointRegistry,
   searchProducts
 } from './endpoints'
 export type { CategoryProductsQuery } from './endpoints'

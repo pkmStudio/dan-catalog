@@ -3,8 +3,9 @@ import type { VehicleContext } from '~/entities/vehicle'
 
 defineProps<{
   context: VehicleContext
-  changeTo?: string
 }>()
+
+const emit = defineEmits<{ edit: [] }>()
 </script>
 
 <template>
@@ -13,6 +14,6 @@ defineProps<{
       <b>Выбранный автомобиль</b>
       <small>{{ context.displayName }}</small>
     </span>
-    <NuxtLink :to="changeTo || '/vehicle'">Изменить</NuxtLink>
+    <button type="button" class="button" @click="emit('edit')">Изменить</button>
   </aside>
 </template>

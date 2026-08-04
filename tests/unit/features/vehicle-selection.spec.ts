@@ -1,115 +1,196 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
-import type { VehicleMake, VehicleModel, VehicleModification } from '~/entities/vehicle/model'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AppError } from '~/shared/api'
+import {
+  createVehicleContext,
+  type CatalogVehicle,
+  type VehicleManufacturer,
+  type VehicleModification
+} from '~/entities/vehicle'
 import {
   useVehicleSelectionStore,
   type VehicleDictionaryApi
 } from '~/features/select-vehicle/model'
 
-const makes: VehicleMake[] = [
-  { id: 'toyota', name: 'Toyota', sortOrder: 0 },
-  { id: 'nissan', name: 'Nissan', sortOrder: 1 }
+const manufacturers: VehicleManufacturer[] = [
+  { id: 101, mfaId: 50101, name: 'Audi' },
+  { id: 102, mfaId: 50102, name: 'Skoda' }
 ]
-const models: VehicleModel[] = [
-  { id: 'camry', makeId: 'toyota', name: 'Camry', sortOrder: 0 },
-  { id: 'rav4', makeId: 'toyota', name: 'RAV4', sortOrder: 1 }
+const vehicles: CatalogVehicle[] = [
+  {
+    id: 1001,
+    msId: 61001,
+    manufacturerId: 102,
+    name: 'Octavia',
+    localizedName: 'Октавия',
+    generation: 'III',
+    generationShort: 'A7',
+    carcase: 'Hatchback',
+    yearFrom: 2013,
+    yearTo: 2020
+  }
 ]
 const modifications: VehicleModification[] = [
   {
-    id: 'toyota-camry-xv70-25',
-    modelId: 'camry',
-    generation: 'XV70',
+    id: 9001,
+    modId: 79001,
+    vehicleId: 1001,
+    msId: 61001,
     yearFrom: 2018,
-    yearTo: 2023,
-    engine: '2.5 бензин',
-    powerHp: 181,
-    displayName: 'XV70 · 2.5 бензин · 2018–2023'
+    yearTo: 2020,
+    description: '1.4 TSI',
+    powerPs: 150,
+    powerKw: 110,
+    engineType: 'Бензин',
+    gearType: 'АКПП',
+    driveType: 'Передний',
+    brakeSystemType: null,
+    numberOfCylinders: 4,
+    capacityLt: 1.4
   }
 ]
+const context = createVehicleContext(manufacturers[1]!, vehicles[0]!, modifications[0]!)
 
 const api: VehicleDictionaryApi = {
-  getMakes: async () => makes,
-  getModels: async (makeId) => models.filter((model) => model.makeId === makeId),
-  getModifications: async (modelId) =>
-    modifications.filter((modification) => modification.modelId === modelId)
+  getManufacturers: vi.fn(async () => manufacturers),
+  getVehicles: vi.fn(async (manufacturerId) =>
+    vehicles.filter((item) => item.manufacturerId === manufacturerId)
+  ),
+  getModifications: vi.fn(async (vehicleId) =>
+    modifications.filter((item) => item.vehicleId === vehicleId)
+  ),
+  getModificationContext: vi.fn(async () => context)
+}
+
+const deferred = <T>() => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
 }
 
 describe('vehicle selection store', () => {
-  beforeEach(() => setActivePinia(createPinia()))
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
 
-  it('clears every descendant when an ancestor changes', async () => {
+  it('selects numeric manufacturer, vehicle and modification in backend order', async () => {
     const store = useVehicleSelectionStore()
-    await store.loadMakes(api)
-    await store.selectMake('toyota', api)
-    await store.selectModel('camry', api)
-    store.selectModification('toyota-camry-xv70-25')
-    expect(store.confirmSelection()?.modification.id).toBe('toyota-camry-xv70-25')
+    await store.loadManufacturers(api)
+    await store.selectManufacturer(102, api)
+    await store.selectVehicle(1001, api)
+    store.selectModification(9001)
 
-    await store.selectMake('nissan', api)
-    expect(store.modelId).toBe('')
-    expect(store.modificationId).toBe('')
-    expect(store.modifications).toEqual([])
+    expect(store.confirmSelection()?.modification.id).toBe(9001)
+    expect(store.confirmed?.displayName).toContain('Skoda')
+  })
+
+  it('clears descendants whenever an ancestor changes', async () => {
+    const store = useVehicleSelectionStore()
+    store.manufacturers = manufacturers
+    store.vehicles = vehicles
+    store.modifications = modifications
+    store.manufacturerId = 102
+    store.vehicleId = 1001
+    store.modificationId = 9001
+    store.confirmed = context
+
+    await store.selectManufacturer(101, api)
+    expect(store.vehicleId).toBeUndefined()
+    expect(store.modificationId).toBeUndefined()
     expect(store.confirmed).toBeUndefined()
   })
 
-  it('clears modification when the model changes', async () => {
+  it('restores context with exactly one detail request and no list traversal', async () => {
     const store = useVehicleSelectionStore()
-    await store.loadMakes(api)
-    await store.selectMake('toyota', api)
-    await store.selectModel('camry', api)
-    store.selectModification('toyota-camry-xv70-25')
+    await store.resolveFromUrl(9001, api)
 
-    await store.selectModel('rav4', api)
-    expect(store.modificationId).toBe('')
-    expect(store.confirmed).toBeUndefined()
-  })
-
-  it('restores a confirmed vehicle context from a URL modification id', async () => {
-    const store = useVehicleSelectionStore()
-    const context = await store.resolveFromUrl('toyota-camry-xv70-25', api)
-
+    expect(api.getModificationContext).toHaveBeenCalledOnce()
+    expect(api.getManufacturers).not.toHaveBeenCalled()
+    expect(api.getVehicles).not.toHaveBeenCalled()
+    expect(api.getModifications).not.toHaveBeenCalled()
     expect(store.status).toBe('ready')
-    expect(context?.displayName).toContain('Toyota Camry')
-    expect(store.makeId).toBe('toyota')
-    expect(store.modelId).toBe('camry')
-    expect(store.modificationId).toBe('toyota-camry-xv70-25')
   })
 
-  it('marks an unknown URL modification invalid and never reuses stale labels', async () => {
+  it('clears stale context and marks a 404 restoration invalid', async () => {
     const store = useVehicleSelectionStore()
-    await store.resolveFromUrl('toyota-camry-xv70-25', api)
-    const context = await store.resolveFromUrl('missing', api)
-
-    expect(context).toBeUndefined()
-    expect(store.status).toBe('invalid')
-    expect(store.confirmed).toBeUndefined()
-    expect(store.makeId).toBe('')
-  })
-
-  it('associates Russian validation with every missing selection', () => {
-    const store = useVehicleSelectionStore()
-
-    expect(store.confirmSelection()).toBeUndefined()
-    expect(store.validationErrors).toEqual({
-      make: 'Выберите марку автомобиля.',
-      model: 'Выберите модель автомобиля.',
-      modification: 'Выберите модификацию автомобиля.'
-    })
-  })
-
-  it('preserves staged selection and enters a recoverable error state', async () => {
-    const store = useVehicleSelectionStore()
-    store.makes = makes
-    await store.selectMake('toyota', {
+    store.confirmed = context
+    await store.resolveFromUrl(9999, {
       ...api,
-      getModels: async () => {
-        throw new Error('network')
+      getModificationContext: async () => {
+        throw new AppError({ code: 'VEHICLE_NOT_FOUND', statusCode: 404 })
       }
     })
+    expect(store.status).toBe('invalid')
+    expect(store.confirmed).toBeUndefined()
+    expect(store.manufacturerId).toBeUndefined()
+  })
 
-    expect(store.makeId).toBe('toyota')
+  it('ignores a late vehicle response for a previous manufacturer', async () => {
+    const oldResponse = deferred<CatalogVehicle[]>()
+    const nextResponse = deferred<CatalogVehicle[]>()
+    const raceApi: VehicleDictionaryApi = {
+      ...api,
+      getVehicles: vi
+        .fn()
+        .mockReturnValueOnce(oldResponse.promise)
+        .mockReturnValueOnce(nextResponse.promise)
+    }
+    const store = useVehicleSelectionStore()
+    store.manufacturers = manufacturers
+
+    const oldRequest = store.selectManufacturer(101, raceApi)
+    const nextRequest = store.selectManufacturer(102, raceApi)
+    nextResponse.resolve(vehicles)
+    await nextRequest
+    oldResponse.resolve([{ ...vehicles[0]!, id: 777, manufacturerId: 101 }])
+    await oldRequest
+
+    expect(store.manufacturerId).toBe(102)
+    expect(store.vehicles.map((item) => item.id)).toEqual([1001])
+  })
+
+  it('preserves the valid parent and retries only the failed stage', async () => {
+    const getVehicles = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('private failure'))
+      .mockResolvedValueOnce([])
+    const retryApi = { ...api, getVehicles }
+    const store = useVehicleSelectionStore()
+    store.manufacturers = manufacturers
+    await store.selectManufacturer(102, retryApi)
+
     expect(store.status).toBe('error')
-    expect(store.errorMessage).toBeTruthy()
-    expect(store.failedStage).toBe('models')
+    expect(store.manufacturerId).toBe(102)
+    await store.retry(retryApi)
+    expect(getVehicles).toHaveBeenCalledTimes(2)
+    expect(store.status).toBe('idle')
+    expect(store.vehicles).toEqual([])
+  })
+
+  it('does not mutate current data after an invalid response', async () => {
+    const store = useVehicleSelectionStore()
+    store.manufacturers = manufacturers
+    await store.selectManufacturer(102, {
+      ...api,
+      getVehicles: async () => {
+        throw new AppError({ code: 'VEHICLE_CATALOG_BAD_RESPONSE' })
+      }
+    })
+    expect(store.vehicles).toEqual([])
+    expect(store.manufacturerId).toBe(102)
+    expect(store.failedStage).toBe('vehicles')
+  })
+
+  it('associates Russian validation with all incomplete stages', () => {
+    const store = useVehicleSelectionStore()
+    expect(store.confirmSelection()).toBeUndefined()
+    expect(store.validationErrors).toEqual({
+      manufacturer: 'Выберите производителя.',
+      vehicle: 'Выберите транспортное средство.',
+      modification: 'Выберите модификацию.'
+    })
   })
 })

@@ -21,8 +21,17 @@ export interface CategoryProductsQuery {
   filter?: readonly string[]
   page?: number
   pageSize?: 9
-  vehicleModificationId?: string
+  vehicleModificationId?: number
 }
+
+export const vehicleEndpointRegistry = {
+  getVehicleManufacturers: () => '/vehicles/manufacturers',
+  getManufacturerVehicles: (manufacturerId: number) =>
+    `/vehicles/manufacturers/${manufacturerId}/vehicles`,
+  getVehicleModifications: (vehicleId: number) => `/vehicles/${vehicleId}/modifications`,
+  getVehicleModificationContext: (modificationId: number) =>
+    `/vehicles/modifications/${modificationId}`
+} as const
 
 export const endpointRegistry = {
   getProductGroups: () => '/catalog/groups',
@@ -37,16 +46,7 @@ export const endpointRegistry = {
     }),
   getProduct: (productId: string) => `/catalog/products/${encodePath(productId)}`,
   searchProducts: (query: string, limit = 8) => withQuery('/catalog/search', { limit, q: query }),
-  getVehicleMakes: () => '/vehicles/makes',
-  getVehicleModels: (makeId: string) => `/vehicles/makes/${encodePath(makeId)}/models`,
-  getVehicleModifications: (modelId: string) =>
-    `/vehicles/models/${encodePath(modelId)}/modifications`,
-  getModificationCategories: (modificationId: string) =>
-    `/vehicles/modifications/${encodePath(modificationId)}/categories`,
-  getProductCompatibility: (productId: string, vehicleModificationId: string) =>
-    withQuery(`/catalog/products/${encodePath(productId)}/compatibility`, {
-      vehicleModificationId
-    }),
+  ...vehicleEndpointRegistry,
   getAboutContent: () => '/content/about',
   getContactContent: () => '/content/contacts',
   createInquiry: () => '/inquiries'
@@ -58,12 +58,11 @@ export const {
   getCategoryProducts,
   getContactContent,
   getGroupCategories,
-  getModificationCategories,
+  getManufacturerVehicles,
   getProduct,
-  getProductCompatibility,
   getProductGroups,
-  getVehicleMakes,
-  getVehicleModels,
+  getVehicleManufacturers,
+  getVehicleModificationContext,
   getVehicleModifications,
   searchProducts
 } = endpointRegistry

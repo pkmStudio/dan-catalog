@@ -1,208 +1,212 @@
 import { defineStore } from 'pinia'
 import {
-  vehicleMakeListResponseSchema,
-  vehicleModelListResponseSchema,
+  catalogVehicleListResponseSchema,
+  createVehicleContext,
+  enrichVehicleContext,
+  vehicleManufacturerListResponseSchema,
+  vehicleModificationContextResponseSchema,
   vehicleModificationListResponseSchema,
+  type CatalogVehicle,
   type VehicleContext,
-  type VehicleMake,
-  type VehicleModel,
+  type VehicleManufacturer,
   type VehicleModification
 } from '~/entities/vehicle'
 import {
   apiRequest,
+  getManufacturerVehicles,
   getSafeErrorMessage,
-  getVehicleMakes,
-  getVehicleModels,
-  getVehicleModifications
+  getVehicleManufacturers,
+  getVehicleModificationContext,
+  getVehicleModifications,
+  normalizeAppError
 } from '~/shared/api'
 
 export type VehicleSelectionStatus = 'idle' | 'loading' | 'ready' | 'invalid' | 'error'
-export type VehicleSelectionStage = 'makes' | 'models' | 'modifications' | 'resolution'
+export type VehicleSelectionStage = 'manufacturers' | 'vehicles' | 'modifications' | 'resolution'
 
 export interface VehicleDictionaryApi {
-  getMakes: () => Promise<VehicleMake[]>
-  getModels: (makeId: string) => Promise<VehicleModel[]>
-  getModifications: (modelId: string) => Promise<VehicleModification[]>
+  getManufacturers: (signal?: AbortSignal) => Promise<VehicleManufacturer[]>
+  getVehicles: (manufacturerId: number, signal?: AbortSignal) => Promise<CatalogVehicle[]>
+  getModifications: (vehicleId: number, signal?: AbortSignal) => Promise<VehicleModification[]>
+  getModificationContext: (modificationId: number, signal?: AbortSignal) => Promise<VehicleContext>
 }
 
 interface VehicleSelectionState {
-  makes: VehicleMake[]
-  models: VehicleModel[]
+  manufacturers: VehicleManufacturer[]
+  vehicles: CatalogVehicle[]
   modifications: VehicleModification[]
-  makeId: string
-  modelId: string
-  modificationId: string
+  manufacturerId?: number
+  vehicleId?: number
+  modificationId?: number
   confirmed?: VehicleContext
   status: VehicleSelectionStatus
   errorMessage: string
-  validationErrors: Partial<Record<'make' | 'model' | 'modification', string>>
+  validationErrors: Partial<Record<'manufacturer' | 'vehicle' | 'modification', string>>
   failedStage?: VehicleSelectionStage
+  pendingResolutionId?: number
+  generations: Record<VehicleSelectionStage, number>
 }
 
-const createDefaultApi = (): VehicleDictionaryApi => {
-  const apiBase = String(useRuntimeConfig().public.apiBase || '/api')
-
-  return {
-    getMakes: async () =>
-      (
-        await apiRequest(getVehicleMakes(), (value) => vehicleMakeListResponseSchema.parse(value), {
-          apiBase
-        })
-      ).data,
-    getModels: async (makeId) =>
-      (
-        await apiRequest(
-          getVehicleModels(makeId),
-          (value) => vehicleModelListResponseSchema.parse(value),
-          { apiBase }
-        )
-      ).data,
-    getModifications: async (modelId) =>
-      (
-        await apiRequest(
-          getVehicleModifications(modelId),
-          (value) => vehicleModificationListResponseSchema.parse(value),
-          { apiBase }
-        )
-      ).data
+const createDefaultApi = (): VehicleDictionaryApi => ({
+  getManufacturers: async (signal) =>
+    (
+      await apiRequest(
+        getVehicleManufacturers(),
+        (value) => vehicleManufacturerListResponseSchema.parse(value),
+        { signal }
+      )
+    ).data,
+  getVehicles: async (manufacturerId, signal) =>
+    (
+      await apiRequest(
+        getManufacturerVehicles(manufacturerId),
+        (value) => catalogVehicleListResponseSchema.parse(value),
+        { signal }
+      )
+    ).data,
+  getModifications: async (vehicleId, signal) =>
+    (
+      await apiRequest(
+        getVehicleModifications(vehicleId),
+        (value) => vehicleModificationListResponseSchema.parse(value),
+        { signal }
+      )
+    ).data,
+  getModificationContext: async (modificationId, signal) => {
+    const response = await apiRequest(
+      getVehicleModificationContext(modificationId),
+      (value) => vehicleModificationContextResponseSchema.parse(value),
+      { signal }
+    )
+    return enrichVehicleContext(response.data)
   }
-}
-
-const createContext = (
-  make: VehicleMake,
-  model: VehicleModel,
-  modification: VehicleModification
-): VehicleContext => ({
-  make,
-  model,
-  modification,
-  displayName: `${make.name} ${model.name} · ${modification.displayName}`
 })
 
 export const resolveVehicleContext = async (
-  modificationId: string,
-  api: VehicleDictionaryApi = createDefaultApi()
-): Promise<
-  | {
-      context: VehicleContext
-      makes: VehicleMake[]
-      models: VehicleModel[]
-      modifications: VehicleModification[]
-    }
-  | undefined
-> => {
-  const makes = await api.getMakes()
-
-  for (const make of makes) {
-    const models = await api.getModels(make.id)
-    for (const model of models) {
-      const modifications = await api.getModifications(model.id)
-      const modification = modifications.find((item) => item.id === modificationId)
-      if (modification) {
-        return {
-          context: createContext(make, model, modification),
-          makes,
-          models,
-          modifications
-        }
-      }
-    }
-  }
-
-  return undefined
-}
+  modificationId: number,
+  api: VehicleDictionaryApi = createDefaultApi(),
+  signal?: AbortSignal
+): Promise<VehicleContext> => await api.getModificationContext(modificationId, signal)
 
 export const useVehicleSelectionStore = defineStore('vehicle-selection', {
   state: (): VehicleSelectionState => ({
-    makes: [],
-    models: [],
+    manufacturers: [],
+    vehicles: [],
     modifications: [],
-    makeId: '',
-    modelId: '',
-    modificationId: '',
     status: 'idle',
     errorMessage: '',
-    validationErrors: {}
+    validationErrors: {},
+    generations: { manufacturers: 0, vehicles: 0, modifications: 0, resolution: 0 }
   }),
 
   getters: {
-    selectedMake: (state): VehicleMake | undefined =>
-      state.makes.find((make) => make.id === state.makeId),
-    selectedModel: (state): VehicleModel | undefined =>
-      state.models.find((model) => model.id === state.modelId),
+    selectedManufacturer: (state): VehicleManufacturer | undefined =>
+      state.manufacturers.find((item) => item.id === state.manufacturerId),
+    selectedVehicle: (state): CatalogVehicle | undefined =>
+      state.vehicles.find((item) => item.id === state.vehicleId),
     selectedModification: (state): VehicleModification | undefined =>
-      state.modifications.find((modification) => modification.id === state.modificationId)
+      state.modifications.find((item) => item.id === state.modificationId)
   },
 
   actions: {
-    beginLoad(stage: VehicleSelectionStage) {
+    startRequest(stage: VehicleSelectionStage): number {
+      const generation = this.generations[stage] + 1
+      this.generations[stage] = generation
       this.status = 'loading'
       this.errorMessage = ''
       this.failedStage = stage
+      return generation
     },
 
-    failLoad(error: unknown) {
+    isCurrent(stage: VehicleSelectionStage, generation: number): boolean {
+      return this.generations[stage] === generation
+    },
+
+    finishRequest(stage: VehicleSelectionStage, generation: number) {
+      if (!this.isCurrent(stage, generation)) return
+      this.status = 'idle'
+      this.failedStage = undefined
+    },
+
+    failRequest(stage: VehicleSelectionStage, generation: number, error: unknown) {
+      if (!this.isCurrent(stage, generation)) return
       this.status = 'error'
+      this.failedStage = stage
       this.errorMessage = getSafeErrorMessage(error)
     },
 
-    async loadMakes(api: VehicleDictionaryApi = createDefaultApi()) {
-      this.beginLoad('makes')
+    async loadManufacturers(api: VehicleDictionaryApi = createDefaultApi()) {
+      const generation = this.startRequest('manufacturers')
       try {
-        this.makes = await api.getMakes()
-        this.status = 'idle'
-        this.failedStage = undefined
+        const items = await api.getManufacturers()
+        if (!this.isCurrent('manufacturers', generation)) return
+        this.manufacturers = items
+        this.finishRequest('manufacturers', generation)
       } catch (error: unknown) {
-        this.failLoad(error)
+        this.failRequest('manufacturers', generation, error)
       }
     },
 
-    async selectMake(makeId: string, api: VehicleDictionaryApi = createDefaultApi()) {
-      this.makeId = makeId
-      this.modelId = ''
-      this.modificationId = ''
-      this.models = []
+    async selectManufacturer(
+      manufacturerId: number | undefined,
+      api: VehicleDictionaryApi = createDefaultApi()
+    ) {
+      this.generations.vehicles += 1
+      this.generations.modifications += 1
+      this.manufacturerId = manufacturerId
+      this.vehicleId = undefined
+      this.modificationId = undefined
+      this.vehicles = []
       this.modifications = []
       this.confirmed = undefined
       this.validationErrors = {}
-      if (!makeId) {
+      if (manufacturerId === undefined) {
         this.status = 'idle'
+        this.failedStage = undefined
         return
       }
 
-      this.beginLoad('models')
+      const generation = this.startRequest('vehicles')
       try {
-        this.models = await api.getModels(makeId)
-        this.status = 'idle'
-        this.failedStage = undefined
+        const items = await api.getVehicles(manufacturerId)
+        if (!this.isCurrent('vehicles', generation) || this.manufacturerId !== manufacturerId)
+          return
+        this.vehicles = items
+        this.finishRequest('vehicles', generation)
       } catch (error: unknown) {
-        this.failLoad(error)
+        this.failRequest('vehicles', generation, error)
       }
     },
 
-    async selectModel(modelId: string, api: VehicleDictionaryApi = createDefaultApi()) {
-      this.modelId = modelId
-      this.modificationId = ''
+    async selectVehicle(
+      vehicleId: number | undefined,
+      api: VehicleDictionaryApi = createDefaultApi()
+    ) {
+      this.generations.modifications += 1
+      this.vehicleId = vehicleId
+      this.modificationId = undefined
       this.modifications = []
       this.confirmed = undefined
-      this.validationErrors.model = undefined
+      this.validationErrors.vehicle = undefined
       this.validationErrors.modification = undefined
-      if (!modelId) {
+      if (vehicleId === undefined) {
         this.status = 'idle'
+        this.failedStage = undefined
         return
       }
 
-      this.beginLoad('modifications')
+      const generation = this.startRequest('modifications')
       try {
-        this.modifications = await api.getModifications(modelId)
-        this.status = 'idle'
-        this.failedStage = undefined
+        const items = await api.getModifications(vehicleId)
+        if (!this.isCurrent('modifications', generation) || this.vehicleId !== vehicleId) return
+        this.modifications = items
+        this.finishRequest('modifications', generation)
       } catch (error: unknown) {
-        this.failLoad(error)
+        this.failRequest('modifications', generation, error)
       }
     },
 
-    selectModification(modificationId: string) {
+    selectModification(modificationId: number | undefined) {
       this.modificationId = modificationId
       this.confirmed = undefined
       this.validationErrors.modification = undefined
@@ -211,16 +215,23 @@ export const useVehicleSelectionStore = defineStore('vehicle-selection', {
 
     confirmSelection(): VehicleContext | undefined {
       this.validationErrors = {
-        ...(!this.selectedMake ? { make: 'Выберите марку автомобиля.' } : {}),
-        ...(!this.selectedModel ? { model: 'Выберите модель автомобиля.' } : {}),
-        ...(!this.selectedModification ? { modification: 'Выберите модификацию автомобиля.' } : {})
+        ...(!this.selectedManufacturer ? { manufacturer: 'Выберите производителя.' } : {}),
+        ...(!this.selectedVehicle ? { vehicle: 'Выберите транспортное средство.' } : {}),
+        ...(!this.selectedModification ? { modification: 'Выберите модификацию.' } : {})
+      }
+      if (!this.selectedManufacturer || !this.selectedVehicle || !this.selectedModification) {
+        return undefined
+      }
+      if (
+        this.selectedVehicle.manufacturerId !== this.selectedManufacturer.id ||
+        this.selectedModification.vehicleId !== this.selectedVehicle.id
+      ) {
+        return undefined
       }
 
-      if (!this.selectedMake || !this.selectedModel || !this.selectedModification) return undefined
-
-      this.confirmed = createContext(
-        this.selectedMake,
-        this.selectedModel,
+      this.confirmed = createVehicleContext(
+        this.selectedManufacturer,
+        this.selectedVehicle,
         this.selectedModification
       )
       this.status = 'ready'
@@ -228,66 +239,90 @@ export const useVehicleSelectionStore = defineStore('vehicle-selection', {
     },
 
     async resolveFromUrl(
-      modificationId: string | undefined,
+      modificationId: number | undefined,
       api: VehicleDictionaryApi = createDefaultApi()
     ): Promise<VehicleContext | undefined> {
-      if (!modificationId) {
-        this.clear()
+      if (modificationId === undefined) {
+        this.clearSelection()
         return undefined
       }
-
       if (this.confirmed?.modification.id === modificationId) return this.confirmed
 
-      this.beginLoad('resolution')
+      this.pendingResolutionId = modificationId
       this.confirmed = undefined
+      const generation = this.startRequest('resolution')
       try {
-        const resolved = await resolveVehicleContext(modificationId, api)
-        if (!resolved) {
-          this.makeId = ''
-          this.modelId = ''
-          this.modificationId = ''
-          this.models = []
-          this.modifications = []
+        const context = await resolveVehicleContext(modificationId, api)
+        if (
+          !this.isCurrent('resolution', generation) ||
+          this.pendingResolutionId !== modificationId
+        ) {
+          return undefined
+        }
+        this.manufacturers = [context.manufacturer]
+        this.vehicles = [context.vehicle]
+        this.modifications = [context.modification]
+        this.manufacturerId = context.manufacturer.id
+        this.vehicleId = context.vehicle.id
+        this.modificationId = context.modification.id
+        this.confirmed = context
+        this.status = 'ready'
+        this.failedStage = undefined
+        return context
+      } catch (error: unknown) {
+        if (!this.isCurrent('resolution', generation)) return undefined
+        const normalized = normalizeAppError(error)
+        this.clearSelection(false)
+        this.pendingResolutionId = modificationId
+        if (normalized.statusCode === 404 || normalized.code === 'VEHICLE_NOT_FOUND') {
           this.status = 'invalid'
           this.failedStage = undefined
           return undefined
         }
-
-        this.makes = resolved.makes
-        this.models = resolved.models
-        this.modifications = resolved.modifications
-        this.makeId = resolved.context.make.id
-        this.modelId = resolved.context.model.id
-        this.modificationId = resolved.context.modification.id
-        this.confirmed = resolved.context
-        this.status = 'ready'
-        this.failedStage = undefined
-        return resolved.context
-      } catch (error: unknown) {
-        this.failLoad(error)
+        this.failRequest('resolution', generation, normalized)
         return undefined
       }
     },
 
     async retry(api: VehicleDictionaryApi = createDefaultApi()) {
-      if (this.failedStage === 'models') return this.selectMake(this.makeId, api)
-      if (this.failedStage === 'modifications') return this.selectModel(this.modelId, api)
-      if (this.failedStage === 'resolution') return this.resolveFromUrl(this.modificationId, api)
-      return this.loadMakes(api)
+      if (this.failedStage === 'vehicles') return this.selectManufacturer(this.manufacturerId, api)
+      if (this.failedStage === 'modifications') return this.selectVehicle(this.vehicleId, api)
+      if (this.failedStage === 'resolution')
+        return this.resolveFromUrl(this.pendingResolutionId, api)
+      return this.loadManufacturers(api)
     },
 
-    clear() {
-      this.makes = []
-      this.models = []
+    async beginEdit(api: VehicleDictionaryApi = createDefaultApi()) {
+      const context = this.confirmed
+      if (!context) return this.loadManufacturers(api)
+      await this.loadManufacturers(api)
+      if (this.status === 'error') return
+      this.manufacturerId = context.manufacturer.id
+      const vehicles = await api.getVehicles(context.manufacturer.id)
+      this.vehicles = vehicles
+      this.vehicleId = context.vehicle.id
+      this.modifications = await api.getModifications(context.vehicle.id)
+      this.modificationId = context.modification.id
+      this.status = 'idle'
+    },
+
+    clearSelection(clearDictionaries = true) {
+      if (clearDictionaries) this.manufacturers = []
+      this.vehicles = []
       this.modifications = []
-      this.makeId = ''
-      this.modelId = ''
-      this.modificationId = ''
+      this.manufacturerId = undefined
+      this.vehicleId = undefined
+      this.modificationId = undefined
       this.confirmed = undefined
       this.status = 'idle'
       this.errorMessage = ''
       this.validationErrors = {}
       this.failedStage = undefined
+    },
+
+    clear() {
+      this.clearSelection()
+      this.pendingResolutionId = undefined
     }
   }
 })

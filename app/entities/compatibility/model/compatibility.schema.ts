@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import { applicationSummarySchema } from '~/entities/vehicle'
+
+const applicationSummarySchema = z.object({
+  modificationId: z.string().min(1),
+  label: z.string().min(1)
+})
 
 export const compatibilityStatusSchema = z.enum(['compatible', 'incompatible', 'unknown'])
 

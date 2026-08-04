@@ -3,7 +3,7 @@ export interface CatalogRouteState {
   query?: string
   filters: Record<string, string[]>
   page: number
-  vehicleModificationId?: string
+  vehicleModificationId?: number
 }
 
 export type CatalogRouteQuery = Record<string, unknown>
@@ -24,6 +24,14 @@ const normalizePage = (value: unknown): number => {
 
   const page = Number(candidate)
   return Number.isSafeInteger(page) ? page : 1
+}
+
+export const parsePositiveIntegerQuery = (value: unknown): number | undefined => {
+  if (Array.isArray(value) || typeof value !== 'string' || !/^[1-9]\d*$/u.test(value)) {
+    return undefined
+  }
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) ? parsed : undefined
 }
 
 const normalizeFilterToken = (token: unknown): { key: string; value: string } | undefined => {
@@ -73,7 +81,7 @@ export const parseCatalogRouteState = (
   routeQuery: CatalogRouteQuery
 ): CatalogRouteState => {
   const query = normalizeOptionalString(routeQuery.q)
-  const vehicleModificationId = normalizeOptionalString(routeQuery.vehicleModificationId)
+  const vehicleModificationId = parsePositiveIntegerQuery(routeQuery.vehicleModificationId)
 
   return {
     categorySlug: categorySlug.trim(),
@@ -90,7 +98,7 @@ export const serializeCatalogRouteState = (
   const query: Record<string, string | string[]> = {}
   const normalizedQuery = normalizeOptionalString(state.query)
   const normalizedFilters = normalizeCatalogFilters(state.filters)
-  const normalizedVehicleId = normalizeOptionalString(state.vehicleModificationId)
+  const normalizedVehicleId = state.vehicleModificationId
 
   if (normalizedQuery) query.q = normalizedQuery
 
@@ -99,7 +107,7 @@ export const serializeCatalogRouteState = (
   )
   if (filterTokens.length) query.filter = filterTokens
   if (state.page > 1 && Number.isSafeInteger(state.page)) query.page = String(state.page)
-  if (normalizedVehicleId) query.vehicleModificationId = normalizedVehicleId
+  if (normalizedVehicleId) query.vehicleModificationId = String(normalizedVehicleId)
 
   return query
 }

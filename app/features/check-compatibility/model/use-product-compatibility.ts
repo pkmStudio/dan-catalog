@@ -1,10 +1,9 @@
-import { compatibilityResponseSchema, type CompatibilityResult } from '~/entities/compatibility'
-import { apiRequest, getProductCompatibility, getSafeErrorMessage } from '~/shared/api'
+import type { CompatibilityResult } from '~/entities/compatibility'
 
 export type CompatibilityLoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 export const useProductCompatibility = (
-  productId: Readonly<Ref<string>>,
+  _productId: Readonly<Ref<string>>,
   modificationId: Readonly<Ref<string | undefined>>
 ) => {
   const status = ref<CompatibilityLoadStatus>('idle')
@@ -19,23 +18,12 @@ export const useProductCompatibility = (
       return
     }
 
-    status.value = 'loading'
     result.value = undefined
-    errorMessage.value = ''
-    try {
-      const response = await apiRequest(
-        getProductCompatibility(productId.value, modificationId.value),
-        (value) => compatibilityResponseSchema.parse(value)
-      )
-      result.value = response.data
-      status.value = 'ready'
-    } catch (error: unknown) {
-      status.value = 'error'
-      errorMessage.value = getSafeErrorMessage(error)
-    }
+    status.value = 'error'
+    errorMessage.value = 'Источник данных о совместимости пока не подключён.'
   }
 
-  watch([productId, modificationId], load, { immediate: true })
+  watch(modificationId, load, { immediate: true })
 
   return { errorMessage, load, result, status }
 }

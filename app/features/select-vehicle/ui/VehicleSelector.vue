@@ -1,35 +1,54 @@
 <script setup lang="ts">
-import type { VehicleContext } from '~/entities/vehicle'
-import { useVehicleSelectionStore } from '../model'
+import {
+  formatCatalogVehicle,
+  formatVehicleModification,
+  type VehicleContext
+} from '~/entities/vehicle'
 import { AppButton } from '~/shared/ui/button'
-import { EmptyState, LoadingState, RecoverableError } from '~/shared/ui/async-state'
+import { EmptyState, RecoverableError } from '~/shared/ui/async-state'
 import { FormField } from '~/shared/ui/form-field'
+import { useVehicleSelectionStore } from '../model'
 
-const emit = defineEmits<{
-  confirmed: [context: VehicleContext]
-}>()
-
+const emit = defineEmits<{ confirmed: [context: VehicleContext] }>()
 const store = useVehicleSelectionStore()
 
 onMounted(async () => {
-  if (!store.makes.length) await store.loadMakes()
+  if (!store.manufacturers.length) await store.loadManufacturers()
 })
 
-const changeMake = async (event: Event) => {
-  await store.selectMake((event.target as HTMLSelectElement).value)
+const valueAsId = (event: Event): number | undefined => {
+  const value = (event.target as HTMLSelectElement).value
+  if (!value) return undefined
+  const id = Number(value)
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined
 }
 
-const changeModel = async (event: Event) => {
-  await store.selectModel((event.target as HTMLSelectElement).value)
-}
+const changeManufacturer = async (event: Event) => store.selectManufacturer(valueAsId(event))
+const changeVehicle = async (event: Event) => store.selectVehicle(valueAsId(event))
+const changeModification = (event: Event) => store.selectModification(valueAsId(event))
 
-const changeModification = (event: Event) => {
-  store.selectModification((event.target as HTMLSelectElement).value)
-}
-
-const submit = () => {
+const submit = async () => {
   const context = store.confirmSelection()
-  if (context) emit('confirmed', context)
+  if (context) {
+    emit('confirmed', context)
+    return
+  }
+  await nextTick()
+  const firstInvalid = document.querySelector<HTMLElement>('[aria-invalid="true"]')
+  firstInvalid?.focus()
+}
+
+const retryFailedStage = async () => {
+  const stage = store.failedStage
+  await store.retry()
+  await nextTick()
+  const targetId = {
+    manufacturers: 'vehicle-manufacturer',
+    vehicles: 'catalog-vehicle',
+    modifications: 'vehicle-modification',
+    resolution: 'vehicle-manufacturer'
+  }[stage ?? 'manufacturers']
+  document.getElementById(targetId)?.focus()
 }
 </script>
 
@@ -38,110 +57,147 @@ const submit = () => {
     <div class="selector-title">
       <h2>
         {{
-          !store.makeId
-            ? 'Шаг 1 из 3 · Выберите марку'
-            : !store.modelId
-              ? 'Шаг 2 из 3 · Выберите модель'
+          !store.manufacturerId
+            ? 'Шаг 1 из 3 · Выберите производителя'
+            : !store.vehicleId
+              ? 'Шаг 2 из 3 · Выберите транспортное средство'
               : 'Шаг 3 из 3 · Выберите модификацию'
         }}
       </h2>
       <span>Подбор по авто</span>
     </div>
 
-    <LoadingState
-      v-if="store.status === 'loading' && !store.makes.length"
-      message="Загружаем марки автомобилей"
-    />
+    <p class="sr-only" role="status" aria-live="polite">
+      {{ store.status === 'loading' ? 'Загрузка данных автомобиля' : store.errorMessage }}
+    </p>
+
     <RecoverableError
-      v-else-if="store.status === 'error'"
+      v-if="store.status === 'error'"
       :message="store.errorMessage"
-      @retry="store.retry()"
+      @retry="retryFailedStage"
     />
     <EmptyState
-      v-else-if="!store.makes.length"
-      title="Марки пока недоступны"
+      v-else-if="!store.manufacturers.length && store.status !== 'loading'"
+      title="Производители пока недоступны"
       description="Попробуйте загрузить список ещё раз."
     >
-      <AppButton @click="store.loadMakes()">Повторить</AppButton>
+      <AppButton @click="store.loadManufacturers()">Повторить</AppButton>
     </EmptyState>
-    <template v-else>
-      <div class="select-row">
-        <FormField id="vehicle-make" label="Марка" required :error="store.validationErrors.make">
-          <template #default="{ id, invalid, describedBy }">
-            <select
-              :id="id"
-              :value="store.makeId"
-              :aria-invalid="invalid"
-              :aria-describedby="describedBy"
-              @change="changeMake"
-            >
-              <option value="">Выберите марку</option>
-              <option v-for="make in store.makes" :key="make.id" :value="make.id">
-                {{ make.name }}
-              </option>
-            </select>
-          </template>
-        </FormField>
 
-        <FormField id="vehicle-model" label="Модель" required :error="store.validationErrors.model">
-          <template #default="{ id, invalid, describedBy }">
-            <select
-              :id="id"
-              :value="store.modelId"
-              :disabled="!store.makeId || store.status === 'loading'"
-              :aria-invalid="invalid"
-              :aria-describedby="describedBy"
-              @change="changeModel"
-            >
-              <option value="">Выберите модель</option>
-              <option v-for="model in store.models" :key="model.id" :value="model.id">
-                {{ model.name }}
-              </option>
-            </select>
-          </template>
-        </FormField>
-
-        <FormField
-          id="vehicle-modification"
-          label="Модификация"
-          required
-          :error="store.validationErrors.modification"
-        >
-          <template #default="{ id, invalid, describedBy }">
-            <select
-              :id="id"
-              :value="store.modificationId"
-              :disabled="!store.modelId || store.status === 'loading'"
-              :aria-invalid="invalid"
-              :aria-describedby="describedBy"
-              @change="changeModification"
-            >
-              <option value="">Выберите модификацию</option>
-              <option
-                v-for="modification in store.modifications"
-                :key="modification.id"
-                :value="modification.id"
-              >
-                {{ modification.displayName }}
-              </option>
-            </select>
-          </template>
-        </FormField>
-      </div>
-
-      <p v-if="store.makeId && !store.models.length && store.status !== 'loading'" role="status">
-        Для выбранной марки моделей пока нет.
-      </p>
-      <p
-        v-if="store.modelId && !store.modifications.length && store.status !== 'loading'"
-        role="status"
+    <div v-else class="select-row">
+      <FormField
+        id="vehicle-manufacturer"
+        label="Производитель"
+        required
+        :error="store.validationErrors.manufacturer"
       >
-        Для выбранной модели модификаций пока нет.
-      </p>
+        <template #default="{ id, invalid, describedBy }">
+          <select
+            :id="id"
+            :value="store.manufacturerId ?? ''"
+            :disabled="store.status === 'loading' && store.failedStage === 'manufacturers'"
+            :aria-invalid="invalid"
+            :aria-describedby="describedBy"
+            @change="changeManufacturer"
+          >
+            <option value="">Выберите производителя</option>
+            <option
+              v-for="manufacturer in store.manufacturers"
+              :key="manufacturer.id"
+              :value="manufacturer.id"
+            >
+              {{ manufacturer.name }}
+            </option>
+          </select>
+        </template>
+      </FormField>
 
-      <AppButton type="submit" :loading="store.status === 'loading'">
-        Показать подходящие категории
-      </AppButton>
-    </template>
+      <FormField
+        id="catalog-vehicle"
+        label="Транспортное средство"
+        required
+        :error="store.validationErrors.vehicle"
+      >
+        <template #default="{ id, invalid, describedBy }">
+          <select
+            :id="id"
+            :value="store.vehicleId ?? ''"
+            :disabled="
+              !store.manufacturerId ||
+              (store.status === 'loading' && store.failedStage === 'vehicles')
+            "
+            :aria-invalid="invalid"
+            :aria-describedby="describedBy"
+            @change="changeVehicle"
+          >
+            <option value="">Выберите транспортное средство</option>
+            <option v-for="vehicle in store.vehicles" :key="vehicle.id" :value="vehicle.id">
+              {{ formatCatalogVehicle(vehicle) }}
+            </option>
+          </select>
+        </template>
+      </FormField>
+
+      <FormField
+        id="vehicle-modification"
+        label="Модификация"
+        required
+        :error="store.validationErrors.modification"
+      >
+        <template #default="{ id, invalid, describedBy }">
+          <select
+            :id="id"
+            :value="store.modificationId ?? ''"
+            :disabled="
+              !store.vehicleId ||
+              (store.status === 'loading' && store.failedStage === 'modifications')
+            "
+            :aria-invalid="invalid"
+            :aria-describedby="describedBy"
+            @change="changeModification"
+          >
+            <option value="">Выберите модификацию</option>
+            <option
+              v-for="modification in store.modifications"
+              :key="modification.id"
+              :value="modification.id"
+            >
+              {{ formatVehicleModification(modification) }}
+            </option>
+          </select>
+        </template>
+      </FormField>
+    </div>
+
+    <p
+      v-if="
+        store.manufacturerId &&
+        !store.vehicles.length &&
+        store.status !== 'loading' &&
+        store.status !== 'error'
+      "
+      role="status"
+    >
+      У выбранного производителя нет доступных транспортных средств. Выберите другого производителя.
+    </p>
+    <p
+      v-if="
+        store.vehicleId &&
+        !store.modifications.length &&
+        store.status !== 'loading' &&
+        store.status !== 'error'
+      "
+      role="status"
+    >
+      У выбранного транспортного средства нет модификаций. Вернитесь к предыдущему шагу.
+    </p>
+
+    <AppButton
+      v-if="store.manufacturers.length"
+      type="submit"
+      :loading="store.status === 'loading'"
+    >
+      Подтвердить автомобиль
+    </AppButton>
   </form>
 </template>

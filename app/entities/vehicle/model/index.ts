@@ -1,20 +1,28 @@
 export {
-  applicationSummarySchema,
-  vehicleContextSchema,
-  vehicleMakeListResponseSchema,
-  vehicleMakeSchema,
-  vehicleModelListResponseSchema,
-  vehicleModelSchema,
+  catalogVehicleListResponseSchema,
+  catalogVehicleSchema,
+  vehicleManufacturerListResponseSchema,
+  vehicleManufacturerSchema,
+  vehicleModificationContextResponseSchema,
+  vehicleModificationContextSchema,
   vehicleModificationListResponseSchema,
   vehicleModificationSchema
 } from './vehicle.schema'
 export type {
-  ApplicationSummary,
+  CatalogVehicle,
+  CatalogVehicleListResponse,
   VehicleContext,
-  VehicleMake,
-  VehicleMakeListResponse,
-  VehicleModel,
-  VehicleModelListResponse,
+  VehicleManufacturer,
+  VehicleManufacturerListResponse,
   VehicleModification,
+  VehicleModificationContext,
+  VehicleModificationContextResponse,
   VehicleModificationListResponse
 } from './vehicle.schema'
+export {
+  createVehicleContext,
+  enrichVehicleContext,
+  formatCatalogVehicle,
+  formatVehicleModification,
+  formatVehicleYears
+} from './vehicle-formatters'

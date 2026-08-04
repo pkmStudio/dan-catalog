@@ -1,25 +1,11 @@
 <script setup lang="ts">
 import { productResponseSchema } from '~/entities/product'
-import { ProductCompatibility } from '~/features/check-compatibility'
-import { useVehicleSelectionStore } from '~/features/select-vehicle'
 import { apiRequest, getProduct } from '~/shared/api'
 import { LoadingState, RecoverableError } from '~/shared/ui/async-state'
 import { ProductDetails } from '~/widgets/product-details'
 
 const route = useRoute()
-const vehicleStore = useVehicleSelectionStore()
 const productId = computed(() => String(route.params.id))
-const modificationId = computed(() => {
-  const value = route.query.vehicleModificationId
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined
-})
-
-if (modificationId.value) {
-  const context = await vehicleStore.resolveFromUrl(modificationId.value)
-  if (!context && vehicleStore.status === 'invalid') {
-    await navigateTo({ path: route.path }, { replace: true })
-  }
-}
 const { data, status, error, refresh } = await useAsyncData(
   () => `product-${productId.value}`,
   () => apiRequest(getProduct(productId.value), (value) => productResponseSchema.parse(value))
@@ -28,7 +14,7 @@ const product = computed(() => data.value?.data)
 useSeoMeta({
   title: () => product.value?.seo.title ?? 'Товар DAN',
   description: () => product.value?.seo.description ?? 'Характеристики товара DAN.',
-  robots: () => (modificationId.value ? 'noindex,follow' : 'index,follow')
+  robots: () => (Object.keys(route.query).length ? 'noindex,follow' : 'index,follow')
 })
 useHead({
   link: [
@@ -54,15 +40,7 @@ useHead({
           { label: product.sku }
         ]"
       />
-      <ProductDetails :product="product">
-        <template #compatibility>
-          <ProductCompatibility
-            :product-id="product.id"
-            :modification-id="modificationId"
-            :vehicle-name="vehicleStore.confirmed?.displayName"
-          />
-        </template>
-      </ProductDetails>
+      <ProductDetails :product="product" />
     </template>
   </main>
 </template>

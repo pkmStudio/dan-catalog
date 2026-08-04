@@ -572,6 +572,7 @@ components:
         - localizedName
         - generation
         - generationShort
+        - carcase
         - yearFrom
         - yearTo
       properties:
@@ -582,6 +583,7 @@ components:
         localizedName: { type: [string, 'null'], minLength: 1 }
         generation: { type: [string, 'null'], minLength: 1 }
         generationShort: { type: [string, 'null'], minLength: 1 }
+        carcase: { type: string, minLength: 1 }
         yearFrom: { type: [integer, 'null'] }
         yearTo: { type: [integer, 'null'] }
 
